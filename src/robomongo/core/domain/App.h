@@ -1,5 +1,7 @@
 #pragma once
 #include <QObject>
+#include <map>
+#include <string>
 #include <vector>
 #include <robomongo/core/events/MongoEvents.h>
 
@@ -15,6 +17,7 @@ namespace Robomongo
     class MongoDatabase;
     class EstablishSshConnectionResponse;
     class LogEvent;
+    class SshTunnelWorker;
 
     namespace detail
     {
@@ -94,7 +97,21 @@ namespace Robomongo
 
     private:
         std::unique_ptr<MongoServer> openServerInternal(ConnectionSettings* connSettings, ConnectionType type);
-        
+
+        /**
+         * Pending per-member SSH tunnels for a replica set connection.
+         * The server is opened once every member has a local tunnel endpoint.
+         */
+        struct PendingMultiSsh {
+            ConnectionSettings* settings = nullptr;   // borrowed (caller-owned original)
+            ConnectionType type = ConnectionPrimary;
+            int remaining = 0;
+            std::map<std::string, int> memberLocalPorts;   // "host:port" -> local port
+        };
+
+        std::map<int, PendingMultiSsh> _pendingMultiSsh;                  // by serverHandle
+        std::map<SshTunnelWorker*, std::string> _pendingSshMemberByWorker;
+
         std::unique_ptr<MongoServer> 
         continueOpenServer(int serverHandle, ConnectionSettings* connSettings, ConnectionType type, int localport = 0);
 

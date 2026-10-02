@@ -73,6 +73,8 @@ if(SYSTEM_LINUX OR SYSTEM_FREEBSD OR SYSTEM_OPENBSD)
 elseif(SYSTEM_MACOSX)
     set(LINK_LIBGROUP_START        "")
     set(LINK_LIBGROUP_END          "")
-    set(LINK_WHOLE_ARCHIVE_START   -Wl,-all_load)
-    set(LINK_WHOLE_ARCHIVE_END     -Wl,-noall_load)
+    # MongoDB_LIBS are plain object files (no archives), and modern Apple ld
+    # rejects -noall_load — so no whole-archive wrappers needed on macOS.
+    set(LINK_WHOLE_ARCHIVE_START   "")
+    set(LINK_WHOLE_ARCHIVE_END     "")
 endif()

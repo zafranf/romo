@@ -8,6 +8,11 @@
 #include <mongo/client/mongo_uri.h>
 #include <mongo/util/net/hostandport.h>
 
+#include <map>
+#include <string>
+#include <utility>
+#include <cctype>
+
 namespace Robomongo
 {
     class CredentialSettings;
@@ -142,6 +147,21 @@ namespace Robomongo
 
         mongo::HostAndPort hostAndPort() const;
         SshSettings *sshSettings() const { return _sshSettings.get(); }
+
+        // Runtime-only SSH tunnel endpoints for replica set connections.
+        // key: "memberhost:memberport" (lowercased host), value: local tunnel
+        // endpoint {host, port}. Not serialized; filled by App after the SSH
+        // tunnels are up and copied by apply()/clone().
+        typedef std::map<std::string, std::pair<std::string, int>> SshTunnelMap;
+        SshTunnelMap const &sshTunnelMap() const { return _sshTunnelMap; }
+        void setSshTunnelMap(SshTunnelMap map) { _sshTunnelMap = std::move(map); }
+        void addSshTunnelEndpoint(std::string const &member, std::string const &host, int port)
+        {
+            std::string key = member;
+            std::transform(key.begin(), key.end(), key.begin(),
+                           [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+            _sshTunnelMap[key] = std::make_pair(host, port);
+        }
         SslSettings *sslSettings() const { return _sslSettings.get(); }
         ReplicaSetSettings *replicaSetSettings() const { return _replicaSetSettings.get(); }
 
@@ -163,6 +183,9 @@ namespace Robomongo
         std::unique_ptr<SslSettings> _sslSettings;
         bool _isReplicaSet;
         std::unique_ptr<ReplicaSetSettings> _replicaSetSettings;
+
+        // Runtime-only SSH tunnel endpoints (see accessor above); not persisted.
+        SshTunnelMap _sshTunnelMap;
         
         // Was this connection imported from somewhere?
         bool _imported;

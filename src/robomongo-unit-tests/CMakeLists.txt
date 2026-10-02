@@ -70,10 +70,10 @@ elseif(SYSTEM_MACOSX)
 #     endforeach()
 endif()
 
-# Disable WebEngineWidgets for Linux
-SET(WebEngineWidgets "Qt5::WebEngineWidgets") 
-if(SYSTEM_LINUX)
-   SET(WebEngineWidgets)  
+# Disable WebEngineWidgets for Linux and macOS (brew Qt5 has no WebEngine)
+SET(WebEngineWidgets "Qt5::WebEngineWidgets")
+if(SYSTEM_LINUX OR SYSTEM_MACOSX)
+   SET(WebEngineWidgets)
 endif()
 
 target_link_libraries(robo_unit_tests 

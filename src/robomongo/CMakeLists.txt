@@ -47,6 +47,8 @@ set(SOURCES
     core/domain/MongoShell.cpp
     core/domain/MongoDatabase.cpp
     core/domain/App.cpp
+    core/history/HistoryStore.cpp
+    core/history/FavoritesStore.cpp
     core/mongodb/MongoClient.cpp
     core/mongodb/MongoWorker.cpp
     core/mongodb/ReplicaSet.cpp
@@ -67,6 +69,7 @@ set(SOURCES
     gui/dialogs/ConnectionDiagnosticDialog.cpp
     gui/dialogs/ConnectionDialog.cpp
     gui/dialogs/CopyCollectionDialog.cpp
+    gui/widgets/HistoryWidget.cpp
     gui/widgets/workarea/IndicatorLabel.cpp
     gui/dialogs/CreateCollectionDialog.cpp
     gui/dialogs/CreateDatabaseDialog.cpp
@@ -144,12 +147,12 @@ set(SOURCES
 # Robomongo target
 add_executable(robomongo MACOSX_BUNDLE WIN32 app/main.cpp ${SOURCES})
 
-# Disable WebEngineWidgets for Linux
-SET(WebEngineWidgets "Qt5::WebEngineWidgets") 
-if(SYSTEM_LINUX)
-   SET(WebEngineWidgets)  
+# Disable WebEngineWidgets for Linux and macOS (brew Qt5 has no WebEngine)
+SET(WebEngineWidgets "Qt5::WebEngineWidgets")
+if(SYSTEM_LINUX OR SYSTEM_MACOSX)
+   SET(WebEngineWidgets)
 endif()
- 
+
 target_link_libraries(robomongo
     PRIVATE
         Qt5::Widgets
@@ -233,7 +236,7 @@ if(SYSTEM_WINDOWS)
     target_sources(robomongo PRIVATE "${CMAKE_BINARY_DIR}/winres.rc")
 
     # Rename output name for Windows
-    set_target_properties(robomongo PROPERTIES OUTPUT_NAME "robo3t")
+    set_target_properties(robomongo PROPERTIES OUTPUT_NAME "romo")
 
     # Suppress "warning C4477: 'sprintf'..." from robomongo\shell\db\ptimeutil.cpp
     # Suppress "warning C4291: ...no matching operator delete found" from third_party\mozjs-60
@@ -249,13 +252,15 @@ elseif(SYSTEM_MACOSX)
     string(TIMESTAMP CURRENT_YEAR "%Y")
     set_target_properties(robomongo PROPERTIES
         INSTALL_RPATH "@executable_path/../Frameworks"
-        OUTPUT_NAME "Robo 3T"
+        OUTPUT_NAME "Romo"
         MACOSX_BUNDLE_INFO_PLIST "${CMAKE_SOURCE_DIR}/install/macosx/Info.plist.in"
-        MACOSX_BUNDLE_BUNDLE_NAME "Robo 3T"
+        MACOSX_BUNDLE_BUNDLE_NAME "Romo"
         MACOSX_BUNDLE_GUI_IDENTIFIER "com.3tsoftwarelabs.robo3t"
-        MACOSX_BUNDLE_INFO_STRING "Robo 3T ${PROJECT_VERSION}. Copyright 3T Software Labs Ltd, 2014 - ${CURRENT_YEAR}"
+        MACOSX_BUNDLE_INFO_STRING "Romo ${PROJECT_VERSION}. Copyright 3T Software Labs Ltd, 2014 - ${CURRENT_YEAR}"
         MACOSX_BUNDLE_SHORT_VERSION "${PROJECT_VERSION}"
         MACOSX_BUNDLE_LONG_VERSION "${PROJECT_VERSION}"
+        MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}"
+        MACOSX_BUNDLE_LONG_VERSION_STRING "${PROJECT_VERSION}"
         MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}"
         MACOSX_BUNDLE_COPYRIGHT "Copyright 3T Software Labs Ltd, 2014 - ${CURRENT_YEAR}"
         MACOSX_BUNDLE_ICON_FILE "robomongo")
@@ -263,7 +268,7 @@ elseif(SYSTEM_MACOSX)
 elseif(SYSTEM_LINUX)
     set_target_properties(robomongo PROPERTIES
         INSTALL_RPATH "$ORIGIN/../lib"
-        OUTPUT_NAME "robo3t")
+        OUTPUT_NAME "romo")
 endif()
 
 # Install

@@ -5,6 +5,10 @@
 
 #include <QThread>
 
+#include <fstream>
+#include <mutex>
+
+#include <mongo/client/dbclient_connection.h>
 #include <mongo/client/global_conn_pool.h>
 #include <mongo/client/replica_set_monitor.h>
 #include <mongo/util/net/ssl_manager.h>
@@ -31,7 +35,7 @@
 namespace Robomongo
 {
     std::string const APP_VERSION = PROJECT_VERSION;
-    std::string const APP_NAME_VERSION { "robo3t-" + APP_VERSION };
+    std::string const APP_NAME_VERSION { "romo-" + APP_VERSION };
 
     MongoWorker::MongoWorker(ConnectionSettings *connection, bool isLoadMongoRcJs, int batchSize,
                              double mongoTimeoutSec, int shellTimeoutSec, QObject *parent) 
@@ -171,6 +175,10 @@ namespace Robomongo
 
         std::unique_ptr<ReplicaSet> repSetInfo(new ReplicaSet);
         auto errorCode = EventError::ErrorCode::Unknown;
+
+        // Register SSH tunnel endpoints (replica set over SSH) before any dial
+        if (!_connSettings->sshTunnelMap().empty())
+            mongo::addSshTunnelRewriteMap(_connSettings->sshTunnelMap());
 
         try {
             auto const& connAndErrorStr = getConnection(true);

@@ -14,6 +14,9 @@
 #include <mongo/client/dbclient_base.h>
 
 #include "robomongo/core/AppRegistry.h"
+#include "robomongo/core/history/HistoryStore.h"
+#include "robomongo/core/settings/ConnectionSettings.h"
+#include "robomongo/core/domain/MongoServer.h"
 #include "robomongo/core/EventBus.h"
 #include "robomongo/core/domain/App.h"
 #include "robomongo/core/domain/MongoCollection.h"
@@ -130,8 +133,26 @@ namespace Robomongo
         if (query.isEmpty())
             query = _scriptWidget->text();
 
+        // Remember executed commands in the shared history (feeds both the
+        // Up/Down recall in the input and the View > History panel).
+        if (_shell && _shell->server() && _shell->server()->connectionRecord()) {
+            ConnectionSettings *connection = _shell->server()->connectionRecord();
+            HistoryStore::instance().add(
+                QtUtils::toQString(connection->connectionName()),
+                QtUtils::toQString(_currentResult.currentDatabase()),
+                query, false);
+        }
+
         showProgress();
         _shell->open(QtUtils::toStdString(query));
+    }
+
+    void QueryWidget::insertFromHistory(const QString &text)
+    {
+        // Paste/Run from history replaces the whole input: history entries are
+        // full statements, splicing them into leftovers is never useful.
+        _scriptWidget->setText(text);
+        _scriptWidget->setScriptFocus();
     }
 
     void QueryWidget::stop()

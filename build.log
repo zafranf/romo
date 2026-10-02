@@ -1,0 +1,711 @@
+fatal: No names found, cannot describe anything.
+poll use is disabled on this platform
+CMake Deprecation Warning at src/third-party/googletest-1.8.1/CMakeLists.txt:1 (cmake_minimum_required):
+  Compatibility with CMake < 3.5 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value or use a ...<max> suffix to tell
+  CMake that the project does not need compatibility with older versions.
+
+
+CMake Deprecation Warning at src/third-party/googletest-1.8.1/googlemock/CMakeLists.txt:42 (cmake_minimum_required):
+  Compatibility with CMake < 3.5 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value or use a ...<max> suffix to tell
+  CMake that the project does not need compatibility with older versions.
+
+
+CMake Deprecation Warning at src/third-party/googletest-1.8.1/googletest/CMakeLists.txt:49 (cmake_minimum_required):
+  Compatibility with CMake < 3.5 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value or use a ...<max> suffix to tell
+  CMake that the project does not need compatibility with older versions.
+
+
+CMake Warning (dev) at src/third-party/googletest-1.8.1/googletest/cmake/internal_utils.cmake:239 (find_package):
+  Policy CMP0148 is not set: The FindPythonInterp and FindPythonLibs modules
+  are removed.  Run "cmake --help-policy CMP0148" for policy details.  Use
+  the cmake_policy command to set the policy and suppress this warning.
+
+Call Stack (most recent call first):
+  src/third-party/googletest-1.8.1/googletest/CMakeLists.txt:84 (include)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+
+ _______________[ Romo configuration summary ]________________
+| 
+|-- Dependencies:
+| 
+|   Qt5 Core:           5.15.19    /opt/homebrew/opt/qt@5/lib/cmake/Qt5Core
+|   Qt5 Gui:            5.15.19    /opt/homebrew/opt/qt@5/lib/cmake/Qt5Gui
+|   Qt5 Widgets:        5.15.19    /opt/homebrew/opt/qt@5/lib/cmake/Qt5Widgets
+|   Qt5 PrintSupport:   5.15.19    /opt/homebrew/opt/qt@5/lib/cmake/Qt5PrintSupport
+|   Qt5 Network:        5.15.19    /opt/homebrew/opt/qt@5/lib/cmake/Qt5Network
+|   Qt5 Xml:            5.15.19    /opt/homebrew/opt/qt@5/lib/cmake/Qt5Xml
+|   Qt5 WebEng*Widgets:     
+|   MongoDB:                /Users/zafran/Applications/Gw/Iseng/roborobo-shell
+|   MongoDB Objects:        /Users/zafran/Applications/Gw/Iseng/roborobo-shell/build/opt
+|   OpenSSL:            1.1.1w    /Users/zafran/Applications/Gw/Iseng/_deps/openssl-1.1.1w
+|   libssh2:            1.11.0     src/third-party/libssh2-1.11.0
+|   QJson:              0.8.1     src/third-party/qjson-0.8.1
+|   QScintilla:         2.8.4     src/third-party/qscintilla-2.8.4
+|   Google Test:        1.8.1     src/third-party/googletest-1.8.1
+|   ESPRIMA:            2.7.3     src/third-party/esprima-2.7.3
+|
+|-- Summary:
+|
+|   Version:            0.1.0
+|   System:             Darwin
+|   Target SDK:         10.14
+|   Build type:         Release
+|   Commit:             4ad11c66
+|   Install path:       /Users/zafran/Applications/Gw/Iseng/roborobo/build/release/install
+|
+|-- Build, Run and Install:
+| 
+|     $ bin/build
+|     $ bin/run
+|     $ bin/install
+|
+|-- Run Unit Tests:
+| 
+|     $ bin/build-and-run-tests
+|     $ bin/run-tests
+|
+|-- Run Static Code Analysis:
+|
+|     $ bin/run-clang-tidy
+|     $ bin/run-scan-build
+|__________________________________________________________________
+
+-- Configuring done (3.2s)
+CMake Warning (dev) in src/third-party/qjson-0.8.1/CMakeLists.txt:
+  Policy CMP0100 is not set: Let AUTOMOC and AUTOUIC process .hh files.  Run
+  "cmake --help-policy CMP0100" for policy details.  Use the cmake_policy
+  command to set the policy and suppress this warning.
+
+  For compatibility, CMake is excluding the header file(s):
+
+    "/Users/zafran/Applications/Gw/Iseng/roborobo/src/third-party/qjson-0.8.1/sources/src/json_parser.hh"
+
+  from processing by AUTOMOC and AUTOUIC.  If any of the files should be
+  processed, set CMP0100 to NEW.  If any of the files should not be
+  processed, explicitly exclude them by setting the source file property
+  SKIP_AUTOGEN:
+
+    set_property(SOURCE file.hh PROPERTY SKIP_AUTOGEN ON)
+
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+-- Generating done (2.6s)
+-- Build files have been written to: /Users/zafran/Applications/Gw/Iseng/roborobo/build/release
+[  0%] Automatic MOC and UIC for target qscintilla
+[  1%] Automatic MOC and UIC for target qjson
+[  3%] Building C object src/third-party/libssh2-1.11.0/CMakeFiles/libssh2.dir/sources/src/blowfish.c.o
+[  3%] Building C object src/third-party/libssh2-1.11.0/CMakeFiles/libssh2.dir/sources/src/agent.c.o
+[  3%] Building C object src/third-party/libssh2-1.11.0/CMakeFiles/libssh2.dir/sources/src/comp.c.o
+[  3%] Building C object src/third-party/libssh2-1.11.0/CMakeFiles/libssh2.dir/sources/src/channel.c.o
+[  3%] Building C object src/third-party/libssh2-1.11.0/CMakeFiles/libssh2.dir/sources/src/bcrypt_pbkdf.c.o
+[  3%] Built target qscintilla_autogen
+[  3%] Built target qjson_autogen
+[  3%] Building C object src/third-party/libssh2-1.11.0/CMakeFiles/libssh2.dir/sources/src/crypt.c.o
+[  4%] Built target gtest
+[  4%] Building C object src/third-party/libssh2-1.11.0/CMakeFiles/libssh2.dir/sources/src/crypto.c.o
+[  4%] Built target gmock
+[  5%] Building C object src/third-party/libssh2-1.11.0/CMakeFiles/libssh2.dir/sources/src/global.c.o
+[  5%] Building C object src/third-party/libssh2-1.11.0/CMakeFiles/libssh2.dir/sources/src/hostkey.c.o
+[  6%] Building C object src/third-party/libssh2-1.11.0/CMakeFiles/libssh2.dir/sources/src/keepalive.c.o
+[  6%] Building C object src/third-party/libssh2-1.11.0/CMakeFiles/libssh2.dir/sources/src/kex.c.o
+[  6%] Building C object src/third-party/libssh2-1.11.0/CMakeFiles/libssh2.dir/sources/src/knownhost.c.o
+[  7%] Built target gtest_main
+[  8%] Building C object src/third-party/libssh2-1.11.0/CMakeFiles/libssh2.dir/sources/src/mac.c.o
+[  8%] Building C object src/third-party/libssh2-1.11.0/CMakeFiles/libssh2.dir/sources/src/misc.c.o
+[  8%] Building C object src/third-party/libssh2-1.11.0/CMakeFiles/libssh2.dir/sources/src/openssl.c.o
+[  9%] Building C object src/third-party/libssh2-1.11.0/CMakeFiles/libssh2.dir/sources/src/packet.c.o
+[ 36%] Building C object src/third-party/libssh2-1.11.0/CMakeFiles/libssh2.dir/sources/src/pem.c.o
+[ 39%] Built target qscintilla
+[ 40%] Building C object src/third-party/libssh2-1.11.0/CMakeFiles/libssh2.dir/sources/src/publickey.c.o
+[ 40%] Building C object src/third-party/libssh2-1.11.0/CMakeFiles/libssh2.dir/sources/src/scp.c.o
+[ 40%] Building C object src/third-party/libssh2-1.11.0/CMakeFiles/libssh2.dir/sources/src/session.c.o
+[ 43%] Built target qjson
+[ 44%] Building C object src/third-party/libssh2-1.11.0/CMakeFiles/libssh2.dir/sources/src/sftp.c.o
+[ 44%] Building C object src/third-party/libssh2-1.11.0/CMakeFiles/libssh2.dir/sources/src/transport.c.o
+[ 45%] Built target gmock_main
+[ 46%] Building C object src/third-party/libssh2-1.11.0/CMakeFiles/libssh2.dir/sources/src/userauth.c.o
+[ 46%] Building C object src/third-party/libssh2-1.11.0/CMakeFiles/libssh2.dir/sources/src/userauth_kbd_packet.c.o
+[ 46%] Building C object src/third-party/libssh2-1.11.0/CMakeFiles/libssh2.dir/sources/src/version.c.o
+[ 47%] Linking C static library libssh2.a
+[ 47%] Built target libssh2
+[ 48%] Building C object src/robomongo/ssh/CMakeFiles/ssh.dir/log.c.o
+[ 48%] Building C object src/robomongo/ssh/CMakeFiles/ssh.dir/array.c.o
+[ 48%] Building C object src/robomongo/ssh/CMakeFiles/ssh.dir/ssh.c.o
+[ 49%] Linking C static library libssh.a
+[ 49%] Built target ssh
+[ 50%] Automatic MOC and UIC for target robomongo
+[ 50%] Building C object src/robomongo/ssh/CMakeFiles/server.dir/server.c.o
+[ 50%] Building C object src/robomongo/ssh/CMakeFiles/ssh_test.dir/test.c.o
+[ 51%] Linking C executable server
+[ 52%] Linking C executable ssh_test
+[ 52%] Built target server
+[ 52%] Built target ssh_test
+[ 52%] Built target robomongo_autogen
+[ 53%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/robomongo_autogen/mocs_compilation.cpp.o
+[ 54%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/core/utils/StdUtils.cpp.o
+[ 54%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/core/utils/QtUtils.cpp.o
+[ 54%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/core/utils/Logger.cpp.o
+[ 54%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/app/main.cpp.o
+[ 55%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/core/HexUtils.cpp.o
+[ 55%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/core/utils/BsonUtils.cpp.o
+[ 55%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/core/settings/CredentialSettings.cpp.o
+[ 56%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/core/settings/ConnectionSettings.cpp.o
+[ 56%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/core/Event.cpp.o
+[ 57%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/core/Enums.cpp.o
+[ 57%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/core/EventError.cpp.o
+[ 57%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/core/EventBusSubscriber.cpp.o
+/Users/zafran/Applications/Gw/Iseng/roborobo/src/robomongo/core/utils/BsonUtils.cpp:644:21: warning: 'sprintf' is deprecated: This function is provided for compatibility reasons only.  Due to security concerns inherent in the design of sprintf(3), it is highly recommended that you use snprintf(3) instead. [-Wdeprecated-declarations]
+  644 |                     sprintf(buff, "ObjectId(\"%s\")", idValue.c_str());
+      |                     ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk/usr/include/_stdio.h:278:1: note: 'sprintf' has been explicitly marked deprecated here
+  278 | __deprecated_msg("This function is provided for compatibility reasons only.  Due to security concerns inherent in the design of sprintf(3), it is highly recommended that you use snprintf(3) instead.")
+      | ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk/usr/include/sys/cdefs.h:227:48: note: expanded from macro '__deprecated_msg'
+  227 |         #define __deprecated_msg(_msg) __attribute__((__deprecated__(_msg)))
+      |                                                       ^
+/Users/zafran/Applications/Gw/Iseng/roborobo/src/robomongo/core/utils/BsonUtils.cpp:709:21: warning: 'sprintf' is deprecated: This function is provided for compatibility reasons only.  Due to security concerns inherent in the design of sprintf(3), it is highly recommended that you use snprintf(3) instead. [-Wdeprecated-declarations]
+  709 |                     sprintf(num, "%d", elem.Int());
+      |                     ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk/usr/include/_stdio.h:278:1: note: 'sprintf' has been explicitly marked deprecated here
+  278 | __deprecated_msg("This function is provided for compatibility reasons only.  Due to security concerns inherent in the design of sprintf(3), it is highly recommended that you use snprintf(3) instead.")
+      | ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk/usr/include/sys/cdefs.h:227:48: note: expanded from macro '__deprecated_msg'
+  227 |         #define __deprecated_msg(_msg) __attribute__((__deprecated__(_msg)))
+      |                                                       ^
+/Users/zafran/Applications/Gw/Iseng/roborobo/src/robomongo/core/utils/BsonUtils.cpp:726:21: warning: 'sprintf' is deprecated: This function is provided for compatibility reasons only.  Due to security concerns inherent in the design of sprintf(3), it is highly recommended that you use snprintf(3) instead. [-Wdeprecated-declarations]
+  726 |                     sprintf(num, "%lld", elem.Long());
+      |                     ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk/usr/include/_stdio.h:278:1: note: 'sprintf' has been explicitly marked deprecated here
+  278 | __deprecated_msg("This function is provided for compatibility reasons only.  Due to security concerns inherent in the design of sprintf(3), it is highly recommended that you use snprintf(3) instead.")
+      | ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk/usr/include/sys/cdefs.h:227:48: note: expanded from macro '__deprecated_msg'
+  227 |         #define __deprecated_msg(_msg) __attribute__((__deprecated__(_msg)))
+      |                                                       ^
+[ 58%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/core/EventBusDispatcher.cpp.o
+[ 58%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/core/EventWrapper.cpp.o
+[ 59%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/core/EventBus.cpp.o
+[ 59%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/core/KeyboardManager.cpp.o
+[ 59%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/core/domain/MongoNamespace.cpp.o
+[ 60%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/core/domain/MongoFunction.cpp.o
+[ 60%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/core/domain/MongoUtils.cpp.o
+[ 61%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/core/domain/MongoCollection.cpp.o
+[ 61%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/core/domain/MongoCollectionInfo.cpp.o
+3 warnings generated.
+[ 61%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/core/domain/MongoQueryInfo.cpp.o
+[ 62%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/core/domain/CursorPosition.cpp.o
+[ 62%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/core/domain/ScriptInfo.cpp.o
+[ 62%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/core/events/MongoEventsInfo.cpp.o
+[ 63%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/shell/db/ptimeutil.cpp.o
+[ 63%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/shell/bson/json.cpp.o
+[ 64%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/core/engine/ScriptEngine.cpp.o
+[ 64%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/core/events/MongoEvents.cpp.o
+/Users/zafran/Applications/Gw/Iseng/roborobo/src/robomongo/shell/db/ptimeutil.cpp:110:9: warning: 'sprintf' is deprecated: This function is provided for compatibility reasons only.  Due to security concerns inherent in the design of sprintf(3), it is highly recommended that you use snprintf(3) instead. [-Wdeprecated-declarations]
+  110 |         sprintf( buf, "%s, %02d %s %04d %02d:%02d:%02d GMT", day, d.day().as_number(), mon, year, t.hours(), t.minutes(), t.seconds() );
+      |         ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk/usr/include/_stdio.h:278:1: note: 'sprintf' has been explicitly marked deprecated here
+  278 | __deprecated_msg("This function is provided for compatibility reasons only.  Due to security concerns inherent in the design of sprintf(3), it is highly recommended that you use snprintf(3) instead.")
+      | ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk/usr/include/sys/cdefs.h:227:48: note: expanded from macro '__deprecated_msg'
+  227 |         #define __deprecated_msg(_msg) __attribute__((__deprecated__(_msg)))
+      |                                                       ^
+/Users/zafran/Applications/Gw/Iseng/roborobo/src/robomongo/shell/db/ptimeutil.cpp:223:13: warning: 'sprintf' is deprecated: This function is provided for compatibility reasons only.  Due to security concerns inherent in the design of sprintf(3), it is highly recommended that you use snprintf(3) instead. [-Wdeprecated-declarations]
+  223 |             sprintf( buf, "%04d-%02d-%02d%c%02d:%02d:%02d.%03dZ", 
+      |             ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk/usr/include/_stdio.h:278:1: note: 'sprintf' has been explicitly marked deprecated here
+  278 | __deprecated_msg("This function is provided for compatibility reasons only.  Due to security concerns inherent in the design of sprintf(3), it is highly recommended that you use snprintf(3) instead.")
+      | ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk/usr/include/sys/cdefs.h:227:48: note: expanded from macro '__deprecated_msg'
+  227 |         #define __deprecated_msg(_msg) __attribute__((__deprecated__(_msg)))
+      |                                                       ^
+/Users/zafran/Applications/Gw/Iseng/roborobo/src/robomongo/shell/db/ptimeutil.cpp:268:13: warning: 'sprintf' is deprecated: This function is provided for compatibility reasons only.  Due to security concerns inherent in the design of sprintf(3), it is highly recommended that you use snprintf(3) instead. [-Wdeprecated-declarations]
+  268 |             sprintf(utc_buff, (diffT.hours() >= 0) ? "+%02d:%02d" : "%03d:%02d", diffT.hours(), abs(diffM));
+      |             ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk/usr/include/_stdio.h:278:1: note: 'sprintf' has been explicitly marked deprecated here
+  278 | __deprecated_msg("This function is provided for compatibility reasons only.  Due to security concerns inherent in the design of sprintf(3), it is highly recommended that you use snprintf(3) instead.")
+      | ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk/usr/include/sys/cdefs.h:227:48: note: expanded from macro '__deprecated_msg'
+  227 |         #define __deprecated_msg(_msg) __attribute__((__deprecated__(_msg)))
+      |                                                       ^
+/Users/zafran/Applications/Gw/Iseng/roborobo/src/robomongo/shell/db/ptimeutil.cpp:269:13: warning: 'sprintf' is deprecated: This function is provided for compatibility reasons only.  Due to security concerns inherent in the design of sprintf(3), it is highly recommended that you use snprintf(3) instead. [-Wdeprecated-declarations]
+  269 |             sprintf(buf, "%04d-%02d-%02d%c%02d:%02d:%02d.%03d",
+      |             ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk/usr/include/_stdio.h:278:1: note: 'sprintf' has been explicitly marked deprecated here
+  278 | __deprecated_msg("This function is provided for compatibility reasons only.  Due to security concerns inherent in the design of sprintf(3), it is highly recommended that you use snprintf(3) instead.")
+      | ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk/usr/include/sys/cdefs.h:227:48: note: expanded from macro '__deprecated_msg'
+  227 |         #define __deprecated_msg(_msg) __attribute__((__deprecated__(_msg)))
+      |                                                       ^
+[ 64%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/core/domain/MongoDocument.cpp.o
+[ 65%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/AppStyle.cpp.o
+[ 65%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/core/domain/MongoServer.cpp.o
+4 warnings generated.
+[ 67%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/core/domain/MongoShell.cpp.o
+[ 67%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/core/domain/MongoDatabase.cpp.o
+/Users/zafran/Applications/Gw/Iseng/roborobo/src/robomongo/shell/bson/json.cpp:792:9: warning: ignoring return value of type 'Status' declared with 'gnu::warn_unused_result' attribute [-Wunused-value]
+  792 |         date(fieldName, builder);
+      |         ^~~~ ~~~~~~~~~~~~~~~~~~
+[ 67%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/core/domain/App.cpp.o
+/Users/zafran/Applications/Gw/Iseng/roborobo/src/robomongo/core/engine/ScriptEngine.cpp:287:9: warning: 'sprintf' is deprecated: This function is provided for compatibility reasons only.  Due to security concerns inherent in the design of sprintf(3), it is highly recommended that you use snprintf(3) instead. [-Wdeprecated-declarations]
+  287 |         sprintf(buff, "DBQuery.shellBatchSize = %d", batchSize);
+      |         ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk/usr/include/_stdio.h:278:1: note: 'sprintf' has been explicitly marked deprecated here
+  278 | __deprecated_msg("This function is provided for compatibility reasons only.  Due to security concerns inherent in the design of sprintf(3), it is highly recommended that you use snprintf(3) instead.")
+      | ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk/usr/include/sys/cdefs.h:227:48: note: expanded from macro '__deprecated_msg'
+  227 |         #define __deprecated_msg(_msg) __attribute__((__deprecated__(_msg)))
+      |                                                       ^
+[ 68%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/core/mongodb/MongoClient.cpp.o
+1 warning generated.
+[ 68%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/core/mongodb/MongoWorker.cpp.o
+[ 69%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/core/mongodb/ReplicaSet.cpp.o
+1 warning generated.
+[ 69%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/core/settings/SettingsManager.cpp.o
+[ 69%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/core/AppRegistry.cpp.o
+/Users/zafran/Applications/Gw/Iseng/roborobo/src/robomongo/core/domain/App.cpp:163:28: warning: unqualified call to 'std::move' [-Wunqualified-std-cast-call]
+  163 |         _servers.push_back(move(openServerInternal(connection, type)));
+      |                            ^
+      |                            std::
+/Users/zafran/Applications/Gw/Iseng/roborobo/src/robomongo/core/domain/App.cpp:219:28: warning: unqualified call to 'std::move' [-Wunqualified-std-cast-call]
+  219 |         _servers.push_back(move(serverClone));
+      |                            ^
+      |                            std::
+/Users/zafran/Applications/Gw/Iseng/roborobo/src/robomongo/core/domain/App.cpp:224:27: warning: unqualified call to 'std::move' [-Wunqualified-std-cast-call]
+  224 |         _shells.push_back(move(shell));
+      |                           ^
+      |                           std::
+/Users/zafran/Applications/Gw/Iseng/roborobo/src/robomongo/core/domain/App.cpp:256:28: warning: unqualified call to 'std::move' [-Wunqualified-std-cast-call]
+  256 |         _servers.push_back(move(
+      |                            ^
+      |                            std::
+[ 70%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/utils/StringOperations.cpp.o
+[ 70%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/utils/common.cpp.o
+[ 71%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/utils/SimpleCrypt.cpp.o
+[ 71%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/utils/RoboCrypt.cpp.o
+4 warnings generated.
+[ 71%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/GuiRegistry.cpp.o
+/Users/zafran/Applications/Gw/Iseng/roborobo/src/robomongo/core/mongodb/MongoWorker.cpp:376:65: warning: 'toStdList' is deprecated: Use std::list<T>(list.begin(), list.end()) instead. [-Wdeprecated-declarations]
+  376 |             for (auto const& db : manuallyVisibleDbs.split(',').toStdList())
+      |                                                                 ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qlist.h:418:5: note: 'toStdList' has been explicitly marked deprecated here
+  418 |     QT_DEPRECATED_VERSION_X_5_14("Use std::list<T>(list.begin(), list.end()) instead.")
+      |     ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qglobal.h:368:45: note: expanded from macro 'QT_DEPRECATED_VERSION_X_5_14'
+  368 | # define QT_DEPRECATED_VERSION_X_5_14(text) QT_DEPRECATED_X(text)
+      |                                             ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qglobal.h:294:33: note: expanded from macro 'QT_DEPRECATED_X'
+  294 | #  define QT_DEPRECATED_X(text) Q_DECL_DEPRECATED_X(text)
+      |                                 ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qcompilerdetection.h:691:55: note: expanded from macro 'Q_DECL_DEPRECATED_X'
+  691 | #    define Q_DECL_DEPRECATED_X(text) __attribute__ ((__deprecated__(text)))
+      |                                                       ^
+/Users/zafran/Applications/Gw/Iseng/roborobo/src/robomongo/utils/SimpleCrypt.cpp:41:5: warning: 'qsrand' is deprecated: use QRandomGenerator instead [-Wdeprecated-declarations]
+   41 |     qsrand(uint(QDateTime::currentMSecsSinceEpoch() & 0xFFFF));
+      |     ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qglobal.h:1284:15: note: 'qsrand' has been explicitly marked deprecated here
+ 1284 | Q_CORE_EXPORT QT_DEPRECATED_VERSION_X_5_15("use QRandomGenerator instead") void qsrand(uint seed);
+      |               ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qglobal.h:376:45: note: expanded from macro 'QT_DEPRECATED_VERSION_X_5_15'
+  376 | # define QT_DEPRECATED_VERSION_X_5_15(text) QT_DEPRECATED_X(text)
+      |                                             ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qglobal.h:294:33: note: expanded from macro 'QT_DEPRECATED_X'
+  294 | #  define QT_DEPRECATED_X(text) Q_DECL_DEPRECATED_X(text)
+      |                                 ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qcompilerdetection.h:691:55: note: expanded from macro 'Q_DECL_DEPRECATED_X'
+  691 | #    define Q_DECL_DEPRECATED_X(text) __attribute__ ((__deprecated__(text)))
+      |                                                       ^
+/Users/zafran/Applications/Gw/Iseng/roborobo/src/robomongo/utils/SimpleCrypt.cpp:50:5: warning: 'qsrand' is deprecated: use QRandomGenerator instead [-Wdeprecated-declarations]
+   50 |     qsrand(uint(QDateTime::currentMSecsSinceEpoch() & 0xFFFF));
+      |     ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qglobal.h:1284:15: note: 'qsrand' has been explicitly marked deprecated here
+ 1284 | Q_CORE_EXPORT QT_DEPRECATED_VERSION_X_5_15("use QRandomGenerator instead") void qsrand(uint seed);
+      |               ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qglobal.h:376:45: note: expanded from macro 'QT_DEPRECATED_VERSION_X_5_15'
+  376 | # define QT_DEPRECATED_VERSION_X_5_15(text) QT_DEPRECATED_X(text)
+      |                                             ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qglobal.h:294:33: note: expanded from macro 'QT_DEPRECATED_X'
+  294 | #  define QT_DEPRECATED_X(text) Q_DECL_DEPRECATED_X(text)
+      |                                 ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qcompilerdetection.h:691:55: note: expanded from macro 'Q_DECL_DEPRECATED_X'
+  691 | #    define Q_DECL_DEPRECATED_X(text) __attribute__ ((__deprecated__(text)))
+      |                                                       ^
+/Users/zafran/Applications/Gw/Iseng/roborobo/src/robomongo/utils/SimpleCrypt.cpp:118:28: warning: 'qrand' is deprecated: use QRandomGenerator instead [-Wdeprecated-declarations]
+  118 |     char randomChar = char(qrand() & 0xFF);
+      |                            ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qglobal.h:1285:15: note: 'qrand' has been explicitly marked deprecated here
+ 1285 | Q_CORE_EXPORT QT_DEPRECATED_VERSION_X_5_15("use QRandomGenerator instead") int qrand();
+      |               ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qglobal.h:376:45: note: expanded from macro 'QT_DEPRECATED_VERSION_X_5_15'
+  376 | # define QT_DEPRECATED_VERSION_X_5_15(text) QT_DEPRECATED_X(text)
+      |                                             ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qglobal.h:294:33: note: expanded from macro 'QT_DEPRECATED_X'
+  294 | #  define QT_DEPRECATED_X(text) Q_DECL_DEPRECATED_X(text)
+      |                                 ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qcompilerdetection.h:691:55: note: expanded from macro 'Q_DECL_DEPRECATED_X'
+  691 | #    define Q_DECL_DEPRECATED_X(text) __attribute__ ((__deprecated__(text)))
+      |                                                       ^
+3 warnings generated.
+[ 72%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/dialogs/AboutDialog.cpp.o
+/Users/zafran/Applications/Gw/Iseng/roborobo/src/robomongo/core/settings/SettingsManager.cpp:244:86: warning: 'toSet' is deprecated: Use QSet<T>(list.begin(), list.end()) instead. [-Wdeprecated-declarations]
+  244 |             _acceptedEulaVersions = map.value("acceptedEulaVersions").toStringList().toSet();
+      |                                                                                      ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qlist.h:412:5: note: 'toSet' has been explicitly marked deprecated here
+  412 |     QT_DEPRECATED_VERSION_X_5_14("Use QSet<T>(list.begin(), list.end()) instead.")
+      |     ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qglobal.h:368:45: note: expanded from macro 'QT_DEPRECATED_VERSION_X_5_14'
+  368 | # define QT_DEPRECATED_VERSION_X_5_14(text) QT_DEPRECATED_X(text)
+      |                                             ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qglobal.h:294:33: note: expanded from macro 'QT_DEPRECATED_X'
+  294 | #  define QT_DEPRECATED_X(text) Q_DECL_DEPRECATED_X(text)
+      |                                 ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qcompilerdetection.h:691:55: note: expanded from macro 'Q_DECL_DEPRECATED_X'
+  691 | #    define Q_DECL_DEPRECATED_X(text) __attribute__ ((__deprecated__(text)))
+      |                                                       ^
+/Users/zafran/Applications/Gw/Iseng/roborobo/src/robomongo/core/settings/SettingsManager.cpp:247:84: warning: 'toSet' is deprecated: Use QSet<T>(list.begin(), list.end()) instead. [-Wdeprecated-declarations]
+  247 |             _dbVersionsConnected = map.value("dbVersionsConnected").toStringList().toSet();
+      |                                                                                    ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qlist.h:412:5: note: 'toSet' has been explicitly marked deprecated here
+  412 |     QT_DEPRECATED_VERSION_X_5_14("Use QSet<T>(list.begin(), list.end()) instead.")
+      |     ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qglobal.h:368:45: note: expanded from macro 'QT_DEPRECATED_VERSION_X_5_14'
+  368 | # define QT_DEPRECATED_VERSION_X_5_14(text) QT_DEPRECATED_X(text)
+      |                                             ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qglobal.h:294:33: note: expanded from macro 'QT_DEPRECATED_X'
+  294 | #  define QT_DEPRECATED_X(text) Q_DECL_DEPRECATED_X(text)
+      |                                 ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qcompilerdetection.h:691:55: note: expanded from macro 'Q_DECL_DEPRECATED_X'
+  691 | #    define Q_DECL_DEPRECATED_X(text) __attribute__ ((__deprecated__(text)))
+      |                                                       ^
+[ 72%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/dialogs/EulaDialog.cpp.o
+[ 72%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/dialogs/ConnectionAdvancedTab.cpp.o
+[ 73%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/dialogs/ConnectionAuthTab.cpp.o
+[ 73%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/dialogs/ConnectionBasicTab.cpp.o
+[ 74%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/dialogs/ConnectionDiagnosticDialog.cpp.o
+[ 74%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/dialogs/ConnectionDialog.cpp.o
+2 warnings generated.
+[ 74%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/dialogs/CopyCollectionDialog.cpp.o
+1 warning generated.
+[ 75%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/widgets/workarea/IndicatorLabel.cpp.o
+/Users/zafran/Applications/Gw/Iseng/roborobo/src/robomongo/gui/dialogs/EulaDialog.cpp:146:78: warning: 'primaryScreen' is deprecated: Use QGuiApplication::primaryScreen() [-Wdeprecated-declarations]
+  146 |             auto const& mainScreenSize = desktop->availableGeometry(desktop->primaryScreen()).size();
+      |                                                                              ^
+/opt/homebrew/opt/qt@5/lib/QtWidgets.framework/Headers/qdesktopwidget.h:73:5: note: 'primaryScreen' has been explicitly marked deprecated here
+   73 |     QT_DEPRECATED_X("Use QGuiApplication::primaryScreen()") int primaryScreen() const;
+      |     ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qglobal.h:294:33: note: expanded from macro 'QT_DEPRECATED_X'
+  294 | #  define QT_DEPRECATED_X(text) Q_DECL_DEPRECATED_X(text)
+      |                                 ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qcompilerdetection.h:691:55: note: expanded from macro 'Q_DECL_DEPRECATED_X'
+  691 | #    define Q_DECL_DEPRECATED_X(text) __attribute__ ((__deprecated__(text)))
+      |                                                       ^
+/Users/zafran/Applications/Gw/Iseng/roborobo/src/robomongo/gui/dialogs/EulaDialog.cpp:146:51: warning: 'availableGeometry' is deprecated: Use QGuiApplication::screens() [-Wdeprecated-declarations]
+  146 |             auto const& mainScreenSize = desktop->availableGeometry(desktop->primaryScreen()).size();
+      |                                                   ^
+/opt/homebrew/opt/qt@5/lib/QtWidgets.framework/Headers/qdesktopwidget.h:88:5: note: 'availableGeometry' has been explicitly marked deprecated here
+   88 |     QT_DEPRECATED_X("Use QGuiApplication::screens()") const QRect availableGeometry(int screen = -1) const;
+      |     ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qglobal.h:294:33: note: expanded from macro 'QT_DEPRECATED_X'
+  294 | #  define QT_DEPRECATED_X(text) Q_DECL_DEPRECATED_X(text)
+      |                                 ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qcompilerdetection.h:691:55: note: expanded from macro 'Q_DECL_DEPRECATED_X'
+  691 | #    define Q_DECL_DEPRECATED_X(text) __attribute__ ((__deprecated__(text)))
+      |                                                       ^
+[ 75%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/dialogs/CreateCollectionDialog.cpp.o
+[ 76%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/dialogs/CreateDatabaseDialog.cpp.o
+[ 76%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/dialogs/CreateUserDialog.cpp.o
+2 warnings generated.
+[ 76%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/utils/ComboBoxUtils.cpp.o
+[ 77%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/utils/DialogUtils.cpp.o
+/Users/zafran/Applications/Gw/Iseng/roborobo/src/robomongo/gui/dialogs/CopyCollectionDialog.cpp:87:58: warning: 'toList' is deprecated: Use values() instead. [-Wdeprecated-declarations]
+   87 |         _serverComboBox->addItems(uniqueConnectionsNames.toList());
+      |                                                          ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qset.h:264:5: note: 'toList' has been explicitly marked deprecated here
+  264 |     QT_DEPRECATED_X("Use values() instead.")
+      |     ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qglobal.h:294:33: note: expanded from macro 'QT_DEPRECATED_X'
+  294 | #  define QT_DEPRECATED_X(text) Q_DECL_DEPRECATED_X(text)
+      |                                 ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qcompilerdetection.h:691:55: note: expanded from macro 'Q_DECL_DEPRECATED_X'
+  691 | #    define Q_DECL_DEPRECATED_X(text) __attribute__ ((__deprecated__(text)))
+      |                                                       ^
+[ 77%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/dialogs/PreferencesDialog.cpp.o
+[ 78%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/dialogs/ConnectionsDialog.cpp.o
+1 warning generated.
+[ 78%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/dialogs/ExportDialog.cpp.o
+[ 78%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/dialogs/ChangeShellTimeoutDialog.cpp.o
+[ 79%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/editors/PlainJavaScriptEditor.cpp.o
+[ 79%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/editors/JSLexer.cpp.o
+[ 80%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/editors/FindFrame.cpp.o
+[ 80%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/widgets/explorer/AddEditIndexDialog.cpp.o
+[ 80%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/widgets/workarea/ScriptWidget.cpp.o
+[ 81%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/widgets/explorer/ExplorerCollectionTreeItem.cpp.o
+[ 81%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/widgets/explorer/ExplorerCollectionIndexesDir.cpp.o
+/Users/zafran/Applications/Gw/Iseng/roborobo/src/robomongo/gui/dialogs/ExportDialog.cpp:309:29: warning: 'start' is deprecated: Use QProcess::start(const QString &program, const QStringList &arguments,OpenMode mode = ReadWrite) instead [-Wdeprecated-declarations]
+  309 |             _activeProcess->start(mongoExport + _mongoExportArgs);
+      |                             ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qprocess.h:164:5: note: 'start' has been explicitly marked deprecated here
+  164 |     QT_DEPRECATED_X(
+      |     ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qglobal.h:294:33: note: expanded from macro 'QT_DEPRECATED_X'
+  294 | #  define QT_DEPRECATED_X(text) Q_DECL_DEPRECATED_X(text)
+      |                                 ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qcompilerdetection.h:691:55: note: expanded from macro 'Q_DECL_DEPRECATED_X'
+  691 | #    define Q_DECL_DEPRECATED_X(text) __attribute__ ((__deprecated__(text)))
+      |                                                       ^
+/Users/zafran/Applications/Gw/Iseng/roborobo/src/robomongo/gui/dialogs/ExportDialog.cpp:318:29: warning: 'start' is deprecated: Use QProcess::start(const QString &program, const QStringList &arguments,OpenMode mode = ReadWrite) instead [-Wdeprecated-declarations]
+  318 |             _activeProcess->start("D:\\mongo_export\\bin\\" + _manualExportCmd->toPlainText());
+      |                             ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qprocess.h:164:5: note: 'start' has been explicitly marked deprecated here
+  164 |     QT_DEPRECATED_X(
+      |     ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qglobal.h:294:33: note: expanded from macro 'QT_DEPRECATED_X'
+  294 | #  define QT_DEPRECATED_X(text) Q_DECL_DEPRECATED_X(text)
+      |                                 ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qcompilerdetection.h:691:55: note: expanded from macro 'Q_DECL_DEPRECATED_X'
+  691 | #    define Q_DECL_DEPRECATED_X(text) __attribute__ ((__deprecated__(text)))
+      |                                                       ^
+[ 81%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/widgets/explorer/ExplorerCollectionIndexItem.cpp.o
+[ 82%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/widgets/explorer/ExplorerTreeItem.cpp.o
+[ 82%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/widgets/explorer/ExplorerReplicaSetFolderItem.cpp.o
+2 warnings generated.
+[ 83%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/widgets/explorer/ExplorerReplicaSetTreeItem.cpp.o
+[ 83%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/widgets/explorer/ExplorerDatabaseTreeItem.cpp.o
+[ 83%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/widgets/explorer/ExplorerDatabaseCategoryTreeItem.cpp.o
+[ 84%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/widgets/explorer/ExplorerUserTreeItem.cpp.o
+[ 84%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/widgets/explorer/ExplorerFunctionTreeItem.cpp.o
+[ 85%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/dialogs/DocumentTextEditor.cpp.o
+[ 85%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/dialogs/FunctionTextEditor.cpp.o
+[ 85%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/widgets/explorer/ExplorerServerTreeItem.cpp.o
+[ 86%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/widgets/explorer/ExplorerTreeWidget.cpp.o
+/Users/zafran/Applications/Gw/Iseng/roborobo/src/robomongo/gui/dialogs/DocumentTextEditor.cpp:33:57: warning: 'availableGeometry' is deprecated: Use QGuiApplication::screens() [-Wdeprecated-declarations]
+   33 |         QRect screenGeometry = QApplication::desktop()->availableGeometry();
+      |                                                         ^
+/opt/homebrew/opt/qt@5/lib/QtWidgets.framework/Headers/qdesktopwidget.h:88:5: note: 'availableGeometry' has been explicitly marked deprecated here
+   88 |     QT_DEPRECATED_X("Use QGuiApplication::screens()") const QRect availableGeometry(int screen = -1) const;
+      |     ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qglobal.h:294:33: note: expanded from macro 'QT_DEPRECATED_X'
+  294 | #  define QT_DEPRECATED_X(text) Q_DECL_DEPRECATED_X(text)
+      |                                 ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qcompilerdetection.h:691:55: note: expanded from macro 'Q_DECL_DEPRECATED_X'
+  691 | #    define Q_DECL_DEPRECATED_X(text) __attribute__ ((__deprecated__(text)))
+      |                                                       ^
+[ 86%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/widgets/explorer/ExplorerWidget.cpp.o
+[ 87%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/widgets/workarea/BsonTableModel.cpp.o
+[ 87%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/widgets/workarea/BsonTableView.cpp.o
+1 warning generated.
+[ 87%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/widgets/workarea/BsonTreeItem.cpp.o
+[ 88%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/widgets/workarea/BsonTreeModel.cpp.o
+[ 88%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/widgets/workarea/BsonTreeView.cpp.o
+[ 88%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/core/domain/Notifier.cpp.o
+[ 89%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/widgets/workarea/CollectionStatsTreeItem.cpp.o
+[ 89%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/widgets/workarea/CollectionStatsTreeWidget.cpp.o
+[ 90%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/widgets/workarea/JsonPrepareThread.cpp.o
+[ 90%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/widgets/workarea/OutputItemContentWidget.cpp.o
+/Users/zafran/Applications/Gw/Iseng/roborobo/src/robomongo/gui/widgets/workarea/BsonTreeModel.cpp:172:25: warning: 'TextColorRole' is deprecated [-Wdeprecated-declarations]
+  172 |         if (role == Qt::TextColorRole && col == BsonTreeItem::eType) {
+      |                         ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qnamespace.h:1550:23: note: 'TextColorRole' has been explicitly marked deprecated here
+ 1550 |         TextColorRole Q_DECL_ENUMERATOR_DEPRECATED = ForegroundRole,
+      |                       ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qcompilerdetection.h:1181:40: note: expanded from macro 'Q_DECL_ENUMERATOR_DEPRECATED'
+ 1181 | #  define Q_DECL_ENUMERATOR_DEPRECATED Q_DECL_DEPRECATED
+      |                                        ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qcompilerdetection.h:243:45: note: expanded from macro 'Q_DECL_DEPRECATED'
+  243 | #  define Q_DECL_DEPRECATED __attribute__ ((__deprecated__))
+      |                                             ^
+/Users/zafran/Applications/Gw/Iseng/roborobo/src/robomongo/gui/widgets/workarea/BsonTreeModel.cpp:201:23: warning: 'QFlags' is deprecated: Use default constructor instead [-Wdeprecated-declarations]
+  201 |         Qt::ItemFlags result = 0;
+      |                       ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qflags.h:123:5: note: 'QFlags' has been explicitly marked deprecated here
+  123 |     QT_DEPRECATED_X("Use default constructor instead") Q_DECL_CONSTEXPR inline QFlags(Zero) noexcept : i(0) {}
+      |     ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qglobal.h:294:33: note: expanded from macro 'QT_DEPRECATED_X'
+  294 | #  define QT_DEPRECATED_X(text) Q_DECL_DEPRECATED_X(text)
+      |                                 ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qcompilerdetection.h:691:55: note: expanded from macro 'Q_DECL_DEPRECATED_X'
+  691 | #    define Q_DECL_DEPRECATED_X(text) __attribute__ ((__deprecated__(text)))
+      |                                                       ^
+[ 90%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/widgets/workarea/OutputItemHeaderWidget.cpp.o
+[ 91%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/widgets/workarea/OutputWidget.cpp.o
+2 warnings generated.
+[ 91%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/widgets/workarea/PagingWidget.cpp.o
+[ 92%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/widgets/workarea/ProgressBarPopup.cpp.o
+[ 92%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/widgets/workarea/QueryWidget.cpp.o
+[ 92%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/widgets/workarea/WorkAreaTabBar.cpp.o
+[ 93%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/widgets/workarea/WorkAreaTabWidget.cpp.o
+[ 93%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/widgets/workarea/WelcomeTab.cpp.o
+[ 94%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/widgets/LogWidget.cpp.o
+/Users/zafran/Applications/Gw/Iseng/roborobo/src/robomongo/gui/widgets/workarea/WorkAreaTabBar.cpp:49:36: warning: 'MidButton' is deprecated: MidButton is deprecated. Use MiddleButton instead [-Wdeprecated-declarations]
+   49 |         if (event->button() == Qt::MidButton)
+      |                                    ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qnamespace.h:132:19: note: 'MidButton' has been explicitly marked deprecated here
+  132 |         MidButton Q_DECL_ENUMERATOR_DEPRECATED_X("MidButton is deprecated. Use MiddleButton instead") = MiddleButton,
+      |                   ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qcompilerdetection.h:1182:45: note: expanded from macro 'Q_DECL_ENUMERATOR_DEPRECATED_X'
+ 1182 | #  define Q_DECL_ENUMERATOR_DEPRECATED_X(x) Q_DECL_DEPRECATED_X(x)
+      |                                             ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qcompilerdetection.h:691:55: note: expanded from macro 'Q_DECL_DEPRECATED_X'
+  691 | #    define Q_DECL_DEPRECATED_X(text) __attribute__ ((__deprecated__(text)))
+      |                                                       ^
+/Users/zafran/Applications/Gw/Iseng/roborobo/src/robomongo/gui/widgets/workarea/OutputWidget.cpp:238:36: warning: 'MidButton' is deprecated: MidButton is deprecated. Use MiddleButton instead [-Wdeprecated-declarations]
+  238 |         if (event->button() != Qt::MidButton)
+      |                                    ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qnamespace.h:132:19: note: 'MidButton' has been explicitly marked deprecated here
+  132 |         MidButton Q_DECL_ENUMERATOR_DEPRECATED_X("MidButton is deprecated. Use MiddleButton instead") = MiddleButton,
+      |                   ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qcompilerdetection.h:1182:45: note: expanded from macro 'Q_DECL_ENUMERATOR_DEPRECATED_X'
+ 1182 | #  define Q_DECL_ENUMERATOR_DEPRECATED_X(x) Q_DECL_DEPRECATED_X(x)
+      |                                             ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qcompilerdetection.h:691:55: note: expanded from macro 'Q_DECL_DEPRECATED_X'
+  691 | #    define Q_DECL_DEPRECATED_X(text) __attribute__ ((__deprecated__(text)))
+      |                                                       ^
+1 warning generated.
+[ 94%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/MainWindow.cpp.o
+[ 94%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/dialogs/SSHTunnelTab.cpp.o
+[ 95%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/gui/dialogs/SSLTab.cpp.o
+1 warning generated.
+[ 95%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/core/settings/SshSettings.cpp.o
+[ 96%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/core/settings/SslSettings.cpp.o
+/Users/zafran/Applications/Gw/Iseng/roborobo/src/robomongo/gui/widgets/workarea/WelcomeTab.cpp:242:26: warning: 'pixmap' is deprecated: Use the other overload which returns QPixmap by-value [-Wdeprecated-declarations]
+  242 |             if ((!_pic1->pixmap() || _pic1->pixmap()->isNull()) && _whatsNewText->text().isEmpty())
+      |                          ^
+/opt/homebrew/opt/qt@5/lib/QtWidgets.framework/Headers/qlabel.h:77:5: note: 'pixmap' has been explicitly marked deprecated here
+   77 |     QT_DEPRECATED_VERSION_X(5, 15, "Use the other overload which returns QPixmap by-value")
+      |     ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qglobal.h:392:53: note: expanded from macro 'QT_DEPRECATED_VERSION_X'
+  392 | #define QT_DEPRECATED_VERSION_X(major, minor, text) QT_DEPRECATED_VERSION_X_##major##_##minor(text)
+      |                                                     ^
+<scratch space>:79:1: note: expanded from here
+   79 | QT_DEPRECATED_VERSION_X_5_15
+      | ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qglobal.h:376:45: note: expanded from macro 'QT_DEPRECATED_VERSION_X_5_15'
+  376 | # define QT_DEPRECATED_VERSION_X_5_15(text) QT_DEPRECATED_X(text)
+      |                                             ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qglobal.h:294:33: note: expanded from macro 'QT_DEPRECATED_X'
+  294 | #  define QT_DEPRECATED_X(text) Q_DECL_DEPRECATED_X(text)
+      |                                 ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qcompilerdetection.h:691:55: note: expanded from macro 'Q_DECL_DEPRECATED_X'
+  691 | #    define Q_DECL_DEPRECATED_X(text) __attribute__ ((__deprecated__(text)))
+      |                                                       ^
+/Users/zafran/Applications/Gw/Iseng/roborobo/src/robomongo/gui/widgets/workarea/WelcomeTab.cpp:242:45: warning: 'pixmap' is deprecated: Use the other overload which returns QPixmap by-value [-Wdeprecated-declarations]
+  242 |             if ((!_pic1->pixmap() || _pic1->pixmap()->isNull()) && _whatsNewText->text().isEmpty())
+      |                                             ^
+/opt/homebrew/opt/qt@5/lib/QtWidgets.framework/Headers/qlabel.h:77:5: note: 'pixmap' has been explicitly marked deprecated here
+   77 |     QT_DEPRECATED_VERSION_X(5, 15, "Use the other overload which returns QPixmap by-value")
+      |     ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qglobal.h:392:53: note: expanded from macro 'QT_DEPRECATED_VERSION_X'
+  392 | #define QT_DEPRECATED_VERSION_X(major, minor, text) QT_DEPRECATED_VERSION_X_##major##_##minor(text)
+      |                                                     ^
+<scratch space>:79:1: note: expanded from here
+   79 | QT_DEPRECATED_VERSION_X_5_15
+      | ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qglobal.h:376:45: note: expanded from macro 'QT_DEPRECATED_VERSION_X_5_15'
+  376 | # define QT_DEPRECATED_VERSION_X_5_15(text) QT_DEPRECATED_X(text)
+      |                                             ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qglobal.h:294:33: note: expanded from macro 'QT_DEPRECATED_X'
+  294 | #  define QT_DEPRECATED_X(text) Q_DECL_DEPRECATED_X(text)
+      |                                 ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qcompilerdetection.h:691:55: note: expanded from macro 'Q_DECL_DEPRECATED_X'
+  691 | #    define Q_DECL_DEPRECATED_X(text) __attribute__ ((__deprecated__(text)))
+      |                                                       ^
+/Users/zafran/Applications/Gw/Iseng/roborobo/src/robomongo/gui/widgets/workarea/WelcomeTab.cpp:305:26: warning: 'pixmap' is deprecated: Use the other overload which returns QPixmap by-value [-Wdeprecated-declarations]
+  305 |             if ((!_pic1->pixmap() || _pic1->pixmap()->isNull()) && _whatsNewText->text().isEmpty())
+      |                          ^
+/opt/homebrew/opt/qt@5/lib/QtWidgets.framework/Headers/qlabel.h:77:5: note: 'pixmap' has been explicitly marked deprecated here
+   77 |     QT_DEPRECATED_VERSION_X(5, 15, "Use the other overload which returns QPixmap by-value")
+      |     ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qglobal.h:392:53: note: expanded from macro 'QT_DEPRECATED_VERSION_X'
+  392 | #define QT_DEPRECATED_VERSION_X(major, minor, text) QT_DEPRECATED_VERSION_X_##major##_##minor(text)
+      |                                                     ^
+<scratch space>:79:1: note: expanded from here
+   79 | QT_DEPRECATED_VERSION_X_5_15
+      | ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qglobal.h:376:45: note: expanded from macro 'QT_DEPRECATED_VERSION_X_5_15'
+  376 | # define QT_DEPRECATED_VERSION_X_5_15(text) QT_DEPRECATED_X(text)
+      |                                             ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qglobal.h:294:33: note: expanded from macro 'QT_DEPRECATED_X'
+  294 | #  define QT_DEPRECATED_X(text) Q_DECL_DEPRECATED_X(text)
+      |                                 ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qcompilerdetection.h:691:55: note: expanded from macro 'Q_DECL_DEPRECATED_X'
+  691 | #    define Q_DECL_DEPRECATED_X(text) __attribute__ ((__deprecated__(text)))
+      |                                                       ^
+/Users/zafran/Applications/Gw/Iseng/roborobo/src/robomongo/gui/widgets/workarea/WelcomeTab.cpp:305:45: warning: 'pixmap' is deprecated: Use the other overload which returns QPixmap by-value [-Wdeprecated-declarations]
+  305 |             if ((!_pic1->pixmap() || _pic1->pixmap()->isNull()) && _whatsNewText->text().isEmpty())
+      |                                             ^
+/opt/homebrew/opt/qt@5/lib/QtWidgets.framework/Headers/qlabel.h:77:5: note: 'pixmap' has been explicitly marked deprecated here
+   77 |     QT_DEPRECATED_VERSION_X(5, 15, "Use the other overload which returns QPixmap by-value")
+      |     ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qglobal.h:392:53: note: expanded from macro 'QT_DEPRECATED_VERSION_X'
+  392 | #define QT_DEPRECATED_VERSION_X(major, minor, text) QT_DEPRECATED_VERSION_X_##major##_##minor(text)
+      |                                                     ^
+<scratch space>:79:1: note: expanded from here
+   79 | QT_DEPRECATED_VERSION_X_5_15
+      | ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qglobal.h:376:45: note: expanded from macro 'QT_DEPRECATED_VERSION_X_5_15'
+  376 | # define QT_DEPRECATED_VERSION_X_5_15(text) QT_DEPRECATED_X(text)
+      |                                             ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qglobal.h:294:33: note: expanded from macro 'QT_DEPRECATED_X'
+  294 | #  define QT_DEPRECATED_X(text) Q_DECL_DEPRECATED_X(text)
+      |                                 ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qcompilerdetection.h:691:55: note: expanded from macro 'Q_DECL_DEPRECATED_X'
+  691 | #    define Q_DECL_DEPRECATED_X(text) __attribute__ ((__deprecated__(text)))
+      |                                                       ^
+[ 96%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/core/settings/ReplicaSetSettings.cpp.o
+[ 96%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/core/mongodb/SshTunnelWorker.cpp.o
+[ 97%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/robomongo_autogen/3YJK5W5UP7/qrc_robo.cpp.o
+[ 97%] Building CXX object src/robomongo/CMakeFiles/robomongo.dir/robomongo_autogen/YHP5W5E6RA/qrc_gui.cpp.o
+/Users/zafran/Applications/Gw/Iseng/roborobo/src/robomongo/gui/MainWindow.cpp:581:61: warning: 'width' is deprecated: Use QFontMetrics::horizontalAdvance [-Wdeprecated-declarations]
+  581 |         _updateLabel->setIndent(_updateLabel->fontMetrics().width("T"));
+      |                                                             ^
+/opt/homebrew/opt/qt@5/lib/QtGui.framework/Headers/qfontmetrics.h:105:5: note: 'width' has been explicitly marked deprecated here
+  105 |     QT_DEPRECATED_X("Use QFontMetrics::horizontalAdvance")
+      |     ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qglobal.h:294:33: note: expanded from macro 'QT_DEPRECATED_X'
+  294 | #  define QT_DEPRECATED_X(text) Q_DECL_DEPRECATED_X(text)
+      |                                 ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qcompilerdetection.h:691:55: note: expanded from macro 'Q_DECL_DEPRECATED_X'
+  691 | #    define Q_DECL_DEPRECATED_X(text) __attribute__ ((__deprecated__(text)))
+      |                                                       ^
+/Users/zafran/Applications/Gw/Iseng/roborobo/src/robomongo/gui/MainWindow.cpp:725:61: warning: 'availableGeometry' is deprecated: Use QGuiApplication::screens() [-Wdeprecated-declarations]
+  725 |             QRect screenGeometry = QApplication::desktop()->availableGeometry();
+      |                                                             ^
+/opt/homebrew/opt/qt@5/lib/QtWidgets.framework/Headers/qdesktopwidget.h:88:5: note: 'availableGeometry' has been explicitly marked deprecated here
+   88 |     QT_DEPRECATED_X("Use QGuiApplication::screens()") const QRect availableGeometry(int screen = -1) const;
+      |     ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qglobal.h:294:33: note: expanded from macro 'QT_DEPRECATED_X'
+  294 | #  define QT_DEPRECATED_X(text) Q_DECL_DEPRECATED_X(text)
+      |                                 ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qcompilerdetection.h:691:55: note: expanded from macro 'Q_DECL_DEPRECATED_X'
+  691 | #    define Q_DECL_DEPRECATED_X(text) __attribute__ ((__deprecated__(text)))
+      |                                                       ^
+/Users/zafran/Applications/Gw/Iseng/roborobo/src/robomongo/gui/MainWindow.cpp:752:58: warning: 'width' is deprecated: Use QFontMetrics::horizontalAdvance [-Wdeprecated-declarations]
+  752 |         int const strWidth = _updateLabel->fontMetrics().width(doc.toPlainText());
+      |                                                          ^
+/opt/homebrew/opt/qt@5/lib/QtGui.framework/Headers/qfontmetrics.h:105:5: note: 'width' has been explicitly marked deprecated here
+  105 |     QT_DEPRECATED_X("Use QFontMetrics::horizontalAdvance")
+      |     ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qglobal.h:294:33: note: expanded from macro 'QT_DEPRECATED_X'
+  294 | #  define QT_DEPRECATED_X(text) Q_DECL_DEPRECATED_X(text)
+      |                                 ^
+/opt/homebrew/opt/qt@5/lib/QtCore.framework/Headers/qcompilerdetection.h:691:55: note: expanded from macro 'Q_DECL_DEPRECATED_X'
+  691 | #    define Q_DECL_DEPRECATED_X(text) __attribute__ ((__deprecated__(text)))
+      |                                                       ^
+4 warnings generated.
+3 warnings generated.
+[ 97%] Linking CXX executable Romo.app/Contents/MacOS/Romo
+[ 97%] Built target robomongo
+[ 97%] Building CXX object src/robomongo-unit-tests/CMakeFiles/robo_unit_tests.dir/__/robomongo/utils/RoboCrypt_test.cpp.o
+[ 98%] Building CXX object src/robomongo-unit-tests/CMakeFiles/robo_unit_tests.dir/__/robomongo/utils/StringOperations_test.cpp.o
+[ 98%] Building CXX object src/robomongo-unit-tests/CMakeFiles/robo_unit_tests.dir/__/robomongo/core/HexUtils_test.cpp.o
+[100%] Linking CXX executable robo_unit_tests
+ld: warning: ignoring duplicate libraries: '../third-party/googletest-1.8.1/googlemock/gtest/libgtest.a'
+[100%] Built target robo_unit_tests

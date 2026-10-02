@@ -75,6 +75,8 @@ namespace Robomongo
     //            be defined and placed into the vector initializer list below in order.
     std::vector<QString> const SettingsManager::_configFilesOfOldVersions
     {
+        QString("%1/.3T/robo-3t/0.1.0/robo3t.json").arg(QDir::homePath()), // Romo pre-flat (versioned era)
+        QString("%1/.3T/robo-3t/1.4.4/robo3t.json").arg(QDir::homePath()), // CONFIG_FILE_1_4_4
         QString("%1/.3T/robo-3t/1.4.3/robo3t.json").arg(QDir::homePath()), // CONFIG_FILE_1_4_3
         QString("%1/.3T/robo-3t/1.4.2/robo3t.json").arg(QDir::homePath()), // CONFIG_FILE_1_4_2
         QString("%1/.3T/robo-3t/1.4.1/robo3t.json").arg(QDir::homePath()), // CONFIG_FILE_1_4_1
@@ -675,7 +677,11 @@ namespace Robomongo
         _lineNumbers     = vmap.value("lineNumbers").toBool();
         _debugMode       = vmap.value("debugMode").toBool();
         _shellTimeoutSec = vmap.value("shellTimeoutSec").toInt();
-        
+
+        //// Import EULA acceptance for this version (don't re-prompt after migration)
+        for (auto const& v : vmap.value("acceptedEulaVersions").toStringList())
+            _acceptedEulaVersions.insert(v);
+
         //// Import connections
         for (auto const& vcon : vmap.value("connections").toList()) {
             QVariantMap const& vconn = vcon.toMap();

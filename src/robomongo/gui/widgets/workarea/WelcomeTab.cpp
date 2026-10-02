@@ -1,6 +1,6 @@
 #include "robomongo/gui/widgets/workarea/WelcomeTab.h"
 
-#ifndef __linux__  // --------------------- Windows, macOS impl --------------------------// 
+#if defined(_WIN32)  // --------------------- Windows impl (WebEngine); Linux & macOS use fallback --------------------------//
 
 #include <QtWebEngineWidgets>
 #include <QDesktopServices>
@@ -115,6 +115,49 @@ namespace Robomongo
     QString const BlogLinkTemplate = "<a style = 'color: #106CD6; text-decoration: none;'"
                                      "href='%1'>%2</a>";
 
+    // Romo: bundled welcome content shown instead of the Studio 3T
+    // files.studio3t.com "what's new" feed and blog.robomongo.org RSS.
+    QString const RomoWelcomeHtml = R"html(
+        <p style="font-size: 13px"><b>Romo</b> is a free, open-source MongoDB client — a
+        continuation of Robo 3T (formerly Robomongo), built for modern servers and
+        modern networks.</p>
+
+        <h3>What's new in Romo compared to Robo 3T</h3>
+        <ul>
+        <li><b>SSH tunnels for Replica Set connections</b> — Romo opens one local
+        tunnel per member, so clusters on private networks just work. Robo 3T
+        disabled the SSH tab whenever Replica Set mode was selected.</li>
+        <li><b>Modern OpenSSH support</b> — bundled libssh2 upgraded from 1.9 to
+        1.11, adding <tt>rsa-sha2</tt>. Robo 3T could no longer authenticate
+        against OpenSSH 8.8+ servers that dropped SHA-1.</li>
+        <li><b>Command history</b> — press Up/Down in the console to recall what
+        you ran earlier, and browse/search everything in the
+        <tt>View &gt; History &amp; Favorites</tt> panel, with Paste and Run
+        actions on every command.</li>
+        <li><b>Starred favorites</b> — save queries under a name, edit them later
+        (<i>View &amp; Edit</i>), star or unstar with one click. Favorites are
+        curated manually and never expire or get trimmed.</li>
+        <li><b>Zero telemetry</b> — no signup form, no blog RSS, no update pings.
+        Romo works fully offline and never sends data anywhere.</li>
+        <li><b>Native Apple Silicon build</b> — compiled for arm64 with a current
+        toolchain.</li>
+        </ul>
+
+        <h3>Everything you know from Robo 3T</h3>
+        <ul>
+        <li>Embedded MongoDB shell 4.2 — connects to MongoDB 3.4 through 7.x</li>
+        <li>TLS/SSL with custom CA and client certificates, including self-signed
+        setups</li>
+        <li>IntelliSense, in-app JavaScript console, Explorer tree, import/export</li>
+        <li>Direct and Replica Set connections, multiple servers side by side</li>
+        </ul>
+
+        <h3>Open source</h3>
+        <p>Romo is licensed under the GNU General Public License v3. It bundles
+        the MongoDB shell (SSPL), Qt (LGPL) and OpenSSL (Apache 2.0).
+        Contributions are welcome.</p>
+    )html";
+
     // For info only. Starting from 1.2.1, PROJECT_VERSION is used.
     // URL Folder number for Pic1 and Text1
     enum {
@@ -143,9 +186,7 @@ namespace Robomongo
     WelcomeTab::WelcomeTab(QScrollArea *parent) :
         QWidget(parent), _parent(parent)
     {
-        _pic1_URL = "https://files.studio3t.com/rm-feed_3t_io/" + IMAGE_PATH;
-        _text1_URL = "https://files.studio3t.com/rm-feed_3t_io/" + CONTENTS_PATH;
-        _rss_URL = "https://blog.robomongo.org/rss/";
+        // Romo: no remote feeds — welcome content is bundled (RomoWelcomeHtml).
 
 #ifdef __APPLE__
         constexpr int HEADER_POINT_SIZE = 10;
@@ -168,6 +209,16 @@ namespace Robomongo
         _whatsNewText->setWordWrap(true);
         _whatsNewText->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
 
+        {
+            QFont welcomeFont { _whatsNewHeader->font() };
+            welcomeFont.setPointSize(18);
+            welcomeFont.setBold(true);
+            _whatsNewHeader->setFont(welcomeFont);
+        }
+        _whatsNewHeader->setText(QString("Welcome to Romo v%1").arg(PROJECT_VERSION));
+        _whatsNewHeader->setVisible(true);
+        _whatsNewText->setText(RomoWelcomeHtml);
+
         _pic1 = new QLabel;
         _pic1->setTextInteractionFlags(Qt::TextSelectableByMouse);
         _pic1->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
@@ -177,23 +228,8 @@ namespace Robomongo
         _blogsHeader->setHidden(true);
         _blogsHeader->setFont(headerFont);
 
-        //// --- Network Access Managers
-        if (!AppRegistry::instance().settingsManager()->disableHttpsFeatures()) {
-            auto text1Downloader = new QNetworkAccessManager;
-            VERIFY(connect(text1Downloader, SIGNAL(finished(QNetworkReply*)),
-                this, SLOT(on_downloadTextReply(QNetworkReply*))));
-            text1Downloader->head(QNetworkRequest(_text1_URL));
-
-            auto pic1Downloader = new QNetworkAccessManager;
-            VERIFY(connect(pic1Downloader, SIGNAL(finished(QNetworkReply*)),
-                this, SLOT(on_downloadPictureReply(QNetworkReply*))));
-            pic1Downloader->head(QNetworkRequest(_pic1_URL));
-
-            auto rssDownloader = new QNetworkAccessManager;
-            VERIFY(connect(rssDownloader, SIGNAL(finished(QNetworkReply*)),
-                this, SLOT(on_downloadRssReply(QNetworkReply*))));
-            rssDownloader->get(QNetworkRequest(_rss_URL));
-        }
+        // Romo: remote downloads (files.studio3t.com feed + blog RSS) removed —
+        // the welcome page is fully offline now.
 
         //// --- Layouts
         _allBlogsButton = new QPushButton("All Blog Posts");

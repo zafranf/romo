@@ -1,4 +1,24 @@
 #include "robomongo/core/domain/App.h"
+#include "robomongo/core/history/HistoryStore.h"
+
+#include <unistd.h>
+
+#include <fstream>
+#include <mutex>
+
+namespace {
+// Temporary debug trail for the RS-over-SSH feature (remove after debugging).
+inline void rbDebug(const std::string& line)
+{
+    // Opt-in diagnostics: silent unless /tmp/romo_debug.log exists (touch it to enable).
+    if (::access("/tmp/romo_debug.log", F_OK) != 0)
+        return;
+    static std::mutex m;
+    std::lock_guard<std::mutex> lk(m);
+    std::ofstream f("/tmp/romo_debug.log", std::ios::app);
+    f << line << std::endl;
+}
+}
 
 #include <QHash>
 #include <QInputDialog>
@@ -89,15 +109,64 @@ namespace Robomongo
     {
         ++_lastServerHandle;
 
+        {
+            std::string membersInfo;
+            if (connSettings->isReplicaSet())
+                for (auto const& m : connSettings->replicaSetSettings()->members())
+                    membersInfo += m + ";";
+            rbDebug("openServerInternal handle=" + std::to_string(_lastServerHandle) +
+                    " type=" + std::to_string(static_cast<int>(type)) +
+                    " sshEnabled=" + std::to_string(connSettings->sshSettings()->enabled()) +
+                    " isRS=" + std::to_string(connSettings->isReplicaSet()) +
+                    " members=[" + membersInfo + "]");
+        }
+
         if (type == ConnectionPrimary)
             _bus->publish(new ConnectingEvent(this));
 
-        // When connection is SECONDARY or SSH not enabled or replica set,
-        // then continue without SSH Tunnel
-        if (type == ConnectionSecondary || !connSettings->sshSettings()->enabled() 
-            || connSettings->isReplicaSet() 
-        ) {
+        // No SSH tunnel needed: secondary connections, or SSH disabled
+        if (type == ConnectionSecondary || !connSettings->sshSettings()->enabled()) {
+            rbDebug("branch=no-tunnel handle=" + std::to_string(_lastServerHandle));
             return continueOpenServer(_lastServerHandle, connSettings, type);
+        }
+
+        // Replica set over SSH: open one tunnel per member (member addresses are
+        // usually not directly routable from this machine), register their local
+        // endpoints in the connection settings, then continue once all are up.
+        if (connSettings->isReplicaSet()) {
+            auto const& members = connSettings->replicaSetSettings()->members();
+            if (members.empty())  // UI validates this; safety net
+                return continueOpenServer(_lastServerHandle, connSettings, type);
+
+            LOG_MSG(QString("Creating SSH tunnels for %1 replica set member(s)...")
+                .arg(members.size()), mongo::logger::LogSeverity::Info());
+
+            PendingMultiSsh pending;
+            pending.settings = connSettings;
+            pending.type = type;
+            pending.remaining = static_cast<int>(members.size());
+
+            for (auto const& member : members) {
+                auto const sepPos = member.find_last_of(':');
+                std::string const host = (sepPos == std::string::npos)
+                    ? member : member.substr(0, sepPos);
+                int const port = (sepPos == std::string::npos)
+                    ? 27017 : std::atoi(member.c_str() + sepPos + 1);
+
+                ConnectionSettings* memberSettings = connSettings->clone();
+                memberSettings->setServerHost(host);
+                memberSettings->setServerPort(port);
+
+                auto* sshWorker = new SshTunnelWorker(memberSettings);
+                _pendingSshMemberByWorker[sshWorker] = member;
+                _bus->send(sshWorker, new EstablishSshConnectionRequest(
+                    this, _lastServerHandle, sshWorker, memberSettings, type));
+            }
+
+            _pendingMultiSsh[_lastServerHandle] = pending;
+            rbDebug("multi-tunnel spawned handle=" + std::to_string(_lastServerHandle) +
+                    " workers=" + std::to_string(_pendingSshMemberByWorker.size()));
+            return nullptr;
         }
 
         // Open SSH channel and only after that open connection
@@ -115,7 +184,7 @@ namespace Robomongo
     {
         SshSettings *ssh = connection->sshSettings();
 
-        if (!connection->isReplicaSet() && ssh->enabled() && ssh->askPassword() &&
+        if (ssh->enabled() && ssh->askPassword() &&
             (type == ConnectionPrimary || type == ConnectionTest)) {
             bool ok = false;
 
@@ -220,6 +289,12 @@ namespace Robomongo
         // Connection between explorer's server and tab's MongoShells
         _bus->subscribe(server, ReplicaSetRefreshed::Type, shell.get()); 
         _bus->publish(new OpeningShellEvent(this, shell.get()));
+        // Explorer-generated shell: record as an auto-generated history entry
+        // (hidden by default in the View > History panel).
+        HistoryStore::instance().add(
+            QtUtils::toQString(connection->connectionName()),
+            QtUtils::toQString(scriptInfo.dbname()),
+            scriptInfo.script(), true);
         shell->execute();
         _shells.push_back(move(shell));
         return;
@@ -245,9 +320,55 @@ namespace Robomongo
 
     void App::handle(EstablishSshConnectionResponse *event) {
         if (event->isError()) {
+            _pendingMultiSsh.erase(event->serverHandle);
             _bus->publish(new ConnectionFailedEvent(
                 this, event->serverHandle, event->connectionType, event->error().errorMessage(),
                 ConnectionFailedEvent::SshConnection));
+            return;
+        }
+
+        // Replica set flow: aggregate per-member tunnels
+        auto pendingIt = _pendingMultiSsh.find(event->serverHandle);
+        if (pendingIt != _pendingMultiSsh.end()) {
+            auto memberIt = _pendingSshMemberByWorker.find(event->worker);
+            if (memberIt != _pendingSshMemberByWorker.end()) {
+                pendingIt->second.memberLocalPorts[memberIt->second] = event->localport;
+                rbDebug("tunnel established member=" + memberIt->second +
+                        " localport=" + std::to_string(event->localport) +
+                        " remaining=" + std::to_string(pendingIt->second.remaining - 1));
+                _pendingSshMemberByWorker.erase(memberIt);
+            }
+            _bus->send(event->worker, new ListenSshConnectionRequest(
+                this, event->serverHandle, event->connectionType));
+
+            if (--pendingIt->second.remaining > 0)
+                return;
+
+            // All member tunnels are up: register local endpoints and continue
+            LOG_MSG(QString("SSH tunnels for all replica set members created successfully"),
+                    mongo::logger::LogSeverity::Info());
+
+            rbDebug("all tunnels up -> continueOpenServer handle=" + std::to_string(event->serverHandle));
+            ConnectionSettings* mappedSettings = pendingIt->second.settings->clone();
+            for (auto const& entry : pendingIt->second.memberLocalPorts)
+                mappedSettings->addSshTunnelEndpoint(entry.first, "127.0.0.1", entry.second);
+
+            int const serverHandle = event->serverHandle;
+            ConnectionType const connectionType = event->connectionType;
+            _pendingMultiSsh.erase(pendingIt);
+
+            auto server = continueOpenServer(serverHandle, mappedSettings, connectionType);
+            delete mappedSettings;  // continueOpenServer clones what it needs
+            _servers.push_back(move(server));
+            return;
+        }
+
+        // Orphaned member tunnel of an already failed replica set connection
+        auto orphanIt = _pendingSshMemberByWorker.find(event->worker);
+        if (orphanIt != _pendingSshMemberByWorker.end()) {
+            _pendingSshMemberByWorker.erase(orphanIt);
+            _bus->send(event->worker, new ListenSshConnectionRequest(
+                this, event->serverHandle, event->connectionType));
             return;
         }
 

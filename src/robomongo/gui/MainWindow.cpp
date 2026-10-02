@@ -28,6 +28,7 @@
 #include "robomongo/core/settings/SettingsManager.h"
 #include "robomongo/core/settings/SshSettings.h"
 #include "robomongo/core/domain/MongoServer.h"
+#include "robomongo/gui/widgets/HistoryWidget.h"
 #include "robomongo/core/domain/App.h"
 #include "robomongo/core/AppRegistry.h"
 #include "robomongo/core/EventBus.h"
@@ -125,7 +126,7 @@ namespace Robomongo
 
     MainWindow::MainWindow()
         : BaseClass(),
-        _logDock(nullptr), _workArea(nullptr), _explorer(nullptr), _app(AppRegistry::instance().app()), 
+        _logDock(nullptr), _historyDock(nullptr), _workArea(nullptr), _explorer(nullptr), _app(AppRegistry::instance().app()), 
         _connectionsMenu(nullptr), _connectButton(nullptr), _viewMenu(nullptr), _toolbarsMenu(nullptr), 
         _connectAction(nullptr), _openAction(nullptr), _saveAction(nullptr), _saveAsAction(nullptr),
         _executeAction(nullptr), _stopAction(nullptr), _orientationAction(nullptr), _execToolBar(nullptr),
@@ -534,7 +535,7 @@ namespace Robomongo
 
     /*** About menu ***/
 
-        QAction *aboutRobomongoAction = new QAction("&About Robo 3T...", this);
+        QAction *aboutRobomongoAction = new QAction("&About Romo...", this);
         VERIFY(connect(aboutRobomongoAction, SIGNAL(triggered()), this, SLOT(aboutRobomongo())));
 
         // Options menu
@@ -611,7 +612,7 @@ namespace Robomongo
 
         createTabs();
         createStatusBar();
-        setWindowTitle("Robo 3T - " + QString(PROJECT_VERSION_SHORT));
+        setWindowTitle("Romo - v" + QString(PROJECT_VERSION));
         setWindowIcon(GuiRegistry::instance().mainWindowIcon());
 
         QTimer::singleShot(0, this, SLOT(manageConnections()));       
@@ -1200,7 +1201,7 @@ namespace Robomongo
     {
 #if defined(Q_OS_WIN)
         if (_trayIcon->contextMenu()->actions().size() > 0 && isHidden()) {
-            _trayIcon->contextMenu()->actions().at(0)->setText("Show Robo 3T");
+            _trayIcon->contextMenu()->actions().at(0)->setText("Show Romo");
         }
 #endif
     }
@@ -1292,6 +1293,27 @@ namespace Robomongo
         _viewMenu->addAction(action);
         
         addDockWidget(Qt::BottomDockWidgetArea, _logDock);
+
+        // Command history panel (View > History): searchable list of executed
+        // commands with per-row Paste/Run actions. Hidden by default.
+        _historyDock = new QDockWidget(tr("History & Favorites"));
+        _historyDock->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea | Qt::BottomDockWidgetArea);
+        _historyDock->setWidget(new HistoryWidget(this));
+        _historyDock->setFeatures(QDockWidget::DockWidgetClosable | QDockWidget::DockWidgetMovable);
+        _historyDock->setVisible(false);
+
+        QAction *historyAction = _historyDock->toggleViewAction();
+        historyAction->setText(QString("History && Favorites"));
+        historyAction->setShortcut(QKeySequence(Qt::CTRL + Qt::SHIFT + Qt::Key_H));
+        historyAction->setStatusTip(QString("Show/hide the command history panel."));
+        _viewMenu->addAction(historyAction);
+
+        addDockWidget(Qt::RightDockWidgetArea, _historyDock);
+    }
+
+    QueryWidget *MainWindow::activeQueryWidget()
+    {
+        return _workArea ? _workArea->currentQueryWidget() : nullptr;
     }
 
     void MainWindow::updateMenus()
@@ -1425,6 +1447,11 @@ namespace Robomongo
 
     void MainWindow::checkUpdates()
     {
+        // Romo: update check removed — it used to phone home to
+        // https://updates.3t.io/check.php with the anonymous ID, app version
+        // and every DB version the user had connected to.
+        return;
+
         auto const& settings { AppRegistry::instance().settingsManager() };
         if (!settings->checkForUpdates() || settings->disableHttpsFeatures())
             return;

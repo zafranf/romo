@@ -142,6 +142,7 @@ namespace Robomongo
         setDefaultDatabase(source->defaultDatabase());
         setImported(source->imported());
         setReplicaSet(source->isReplicaSet());
+        _sshTunnelMap = source->_sshTunnelMap;
 
         clearCredentials();
         QList<CredentialSettings *> cred = source->credentials();

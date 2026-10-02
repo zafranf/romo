@@ -15,15 +15,13 @@ namespace Robomongo
     class ConnectionSettings;
     struct ConfigFileAndImportFunction;
         
-    // Current cache directory
-    auto const CacheDir = QString("%1/.3T/robo-3t/%2/cache/").arg(QDir::homePath())
-                                                             .arg(PROJECT_VERSION);
+    // Config/cache live in a single non-versioned directory: upgrading Romo
+    // never moves the config, so no per-version copy/import dance is needed.
+    auto const CacheDir = QString("%1/.romo/cache/").arg(QDir::homePath());
     // Current config file
-    auto const ConfigFilePath = QString("%1/.3T/robo-3t/%2/robo3t.json").arg(QDir::homePath())
-                                                                        .arg(PROJECT_VERSION);  
+    auto const ConfigFilePath = QString("%1/.romo/romo.json").arg(QDir::homePath());
     // Current config file directory
-    auto const ConfigDir = QString("%1/.3T/robo-3t/%2/").arg(QDir::homePath())
-                                                        .arg(PROJECT_VERSION);  
+    auto const ConfigDir = QString("%1/.romo/").arg(QDir::homePath());
 
 /* ----------------------------- SettingsManager ------------------------------ */
 

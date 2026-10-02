@@ -27,6 +27,7 @@ namespace Robomongo
     class App;
     class ExplorerWidget;
     class WelcomeTab;
+    class QueryWidget;
 
     class MainWindow : public QMainWindow
     {
@@ -39,6 +40,9 @@ namespace Robomongo
         WelcomeTab* getWelcomeTab();
         void showQueryWidgetProgressBar() const;
         void hideQueryWidgetProgressBar() const;
+
+        /** Active console tab, or nullptr when no console is open. */
+        QueryWidget *activeQueryWidget();
 
     public Q_SLOTS:
         void manageConnections();
@@ -128,6 +132,7 @@ namespace Robomongo
         void adjustUpdatesBarHeight();
 
         QDockWidget *_logDock;
+        QDockWidget *_historyDock;
 
         WorkAreaTabWidget *_workArea;
 

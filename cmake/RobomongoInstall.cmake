@@ -24,7 +24,7 @@ if(SYSTEM_LINUX)
     set(qt_conf_dir         ${bin_dir})
     set(qt_conf_plugins     "../lib")
 elseif(SYSTEM_MACOSX)
-    set(bundle_name         "Robo 3T.app")
+    set(bundle_name         "Romo.app")
     set(contents_path       ${bundle_name}/Contents)
 
     set(bin_dir             ${contents_path}/MacOS)
@@ -98,8 +98,11 @@ install(
 
 # Install common dependencies
 SET(QT_LIBS Core Gui Widgets PrintSupport Network Xml)
-if(NOT SYSTEM_LINUX)
-    SET(QT_LIBS ${QT_LIBS} WebEngineWidgets WebEngineCore Quick 
+if(SYSTEM_WINDOWS)
+    SET(QT_LIBS ${QT_LIBS} WebEngineWidgets WebEngineCore Quick
+                           QuickWidgets WebChannel Qml Positioning)
+elseif(NOT SYSTEM_LINUX)
+    SET(QT_LIBS ${QT_LIBS} Quick
                            QuickWidgets WebChannel Qml Positioning)
 endif()
 install_qt_lib(${QT_LIBS})
@@ -133,6 +136,21 @@ elseif(SYSTEM_MACOSX)
 
     # Install styles    
     install(FILES "${QT_STYLES_DIR}/libqmacstyle.dylib" DESTINATION ${styles_dir})
+
+    # Bundle OpenSSL dylibs (built from source; their ids point at /usr/local/lib),
+    # rewrite install names in the installed binary, then ad-hoc re-sign (arm64).
+    install(CODE "
+        set(ROMO_BUNDLE \"\${CMAKE_INSTALL_PREFIX}/Romo.app\")
+        set(ROMO_FW \"\${ROMO_BUNDLE}/Contents/Frameworks\")
+        set(ROMO_BIN \"\${ROMO_BUNDLE}/Contents/MacOS/Romo\")
+        file(COPY \"${OpenSSL_DIR}/libssl.1.1.dylib\" \"${OpenSSL_DIR}/libcrypto.1.1.dylib\" DESTINATION \"\${ROMO_FW}\")
+        execute_process(COMMAND install_name_tool -change /usr/local/lib/libssl.1.1.dylib \"@executable_path/../Frameworks/libssl.1.1.dylib\" \"\${ROMO_BIN}\")
+        execute_process(COMMAND install_name_tool -change /usr/local/lib/libcrypto.1.1.dylib \"@executable_path/../Frameworks/libcrypto.1.1.dylib\" \"\${ROMO_BIN}\")
+        execute_process(COMMAND install_name_tool -change /usr/local/lib/libcrypto.1.1.dylib \"@executable_path/../Frameworks/libcrypto.1.1.dylib\" \"\${ROMO_FW}/libssl.1.1.dylib\")
+        execute_process(COMMAND codesign -s - --force \"\${ROMO_FW}/libcrypto.1.1.dylib\")
+        execute_process(COMMAND codesign -s - --force \"\${ROMO_FW}/libssl.1.1.dylib\")
+        execute_process(COMMAND codesign -s - --force \"\${ROMO_BIN}\")
+    ")
 elseif(SYSTEM_WINDOWS)
     install_qt_plugins(
         QWindowsIntegrationPlugin

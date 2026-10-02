@@ -113,13 +113,12 @@ namespace Robomongo
         _advancedTab->setDefaultDb(defaultDb);
     }
 
-    void ConnectionDialog::toggleSshSupport(bool isReplicaSet)
+    void ConnectionDialog::toggleSshSupport(bool /*isReplicaSet*/)
     {
-        if (!_sshTab) 
-            return;
-        
-        _sshTab->setDisabled(isReplicaSet);
-        _sshTab->toggleSshCheckboxToolTip(isReplicaSet);
+        // SSH tunnel now supports replica sets (one local tunnel per member),
+        // so the SSH tab stays enabled regardless of the connection type.
+        // Previously this disabled the whole tab when Replica Set was selected,
+        // reflecting the old limitation where App skipped SSH for RS entirely.
     }
 
     void ConnectionDialog::clearConnAuthTab()

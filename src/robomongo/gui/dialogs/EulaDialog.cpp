@@ -30,7 +30,12 @@ namespace Robomongo
     EulaDialog::EulaDialog(bool showFormPage, QWidget *parent)
         : QWizard(parent), _showFormPage(showFormPage)
     {
-        setWindowTitle("EULA");
+        setWindowTitle("License");
+
+        // Romo: the Studio 3T signup form page is permanently disabled — it used
+        // to POST name/email/phone/company/OS/timezone to https://rm-form.3t.io.
+        // Nothing is ever sent anywhere now.
+        _showFormPage = false;
 
         //// First page
         auto firstPage = new QWizardPage;
@@ -62,8 +67,15 @@ namespace Robomongo
         hline->setFrameShadow(QFrame::Sunken);
 
         auto mainLayout1 = new QVBoxLayout();
-        mainLayout1->addWidget(new QLabel("<h3>End-User License Agreement</h3>"));
-        mainLayout1->addWidget(new QLabel(""));
+        mainLayout1->addWidget(new QLabel("<h3>Romo — License Notice</h3>"));
+        auto introLabel = new QLabel(
+            "<b>Romo</b> is free software licensed under the <b>GNU General Public License v3</b> "
+            "— a fork of <b>Robo 3T</b> (formerly Robomongo) by Studio 3T and Robomongo contributors. "
+            "The full license text is below. This build bundles the MongoDB shell (SSPL), Qt (LGPL) "
+            "and OpenSSL (Apache 2.0). Romo is provided 'as is' with no warranty, and it never "
+            "sends any data anywhere.");
+        introLabel->setWordWrap(true);
+        mainLayout1->addWidget(introLabel);
         mainLayout1->addWidget(textBrowser);
         mainLayout1->addWidget(new QLabel(""));
         mainLayout1->addLayout(radioButtonsLay, Qt::AlignCenter);
@@ -72,51 +84,9 @@ namespace Robomongo
 
         firstPage->setLayout(mainLayout1);
 
-        //// Second page
-        auto secondPage = new QWizardPage;
-
-        auto nameLabel = new QLabel("<b>First Name:</b>");
-        _nameEdit = new QLineEdit;
-        auto lastNameLabel = new QLabel("<b>Last Name:</b>");
-        _lastNameEdit = new QLineEdit;
-
-        auto emailLabel = new QLabel("<b>Email:</b>");
-        _emailEdit = new QLineEdit;
-
-        _phone = new QLineEdit;
-        _company = new QLineEdit;
-
-        auto buttomLabel = new QLabel("By submitting this form I agree to 3T Software Labs "
-            "<a href='https://studio3t.com/privacy-policy'>Privacy Policy</a>.");
-        buttomLabel->setOpenExternalLinks(true);
-
-        auto bodyLabel = new QLabel("\nShare your email address with us and we'll keep you "
-            "up-to-date with updates from us and new features as they come out.");
-        bodyLabel->setWordWrap(true);
-
-        auto mainLayout2 = new QGridLayout();
-        mainLayout2->addWidget(new QLabel,                      0, 0, 1, 2);
-        mainLayout2->addWidget(new QLabel("<h3>Thank you for choosing Robo 3T!</h3>"), 1, 0, 1, 2);
-        mainLayout2->addWidget(bodyLabel,                       2, 0 , 1, 2);
-        mainLayout2->addWidget(new QLabel,                      3, 0, 1, 2);
-        mainLayout2->addWidget(nameLabel,                       4, 0);
-        mainLayout2->addWidget(_nameEdit,                       4, 1);
-        mainLayout2->addWidget(lastNameLabel,                   5, 0);
-        mainLayout2->addWidget(_lastNameEdit,                   5, 1);
-        mainLayout2->addWidget(emailLabel,                      6, 0);
-        mainLayout2->addWidget(_emailEdit,                      6, 1);
-        mainLayout2->addWidget(new QLabel("<b>Phone: </b>"),    7, 0);
-        mainLayout2->addWidget(_phone,                          7, 1);
-        mainLayout2->addWidget(new QLabel("<b>Company:</b>"),   8, 0);
-        mainLayout2->addWidget(_company,                        8, 1);
-        mainLayout2->addWidget(new QLabel,                      9, 0, 1, 2);
-        mainLayout2->addWidget(buttomLabel,                     10, 0, 1, 2);
-
-        secondPage->setLayout(mainLayout2);
-
+        // Romo: the former second page (Studio 3T marketing signup form that
+        // posted user data to https://rm-form.3t.io) has been removed.
         addPage(firstPage);
-        if(_showFormPage)
-            addPage(secondPage);
 
         //// Buttons
         setButtonText(QWizard::CustomButton1, tr("Back"));
@@ -137,7 +107,7 @@ namespace Robomongo
 
         setWizardStyle(QWizard::ModernStyle);
 
-        QSettings const settings("3T", "Robomongo");
+        QSettings const settings("Romo", "Romo");
         if (settings.contains("EulaDialog/size")) {
             restoreWindowSettings();
         }
@@ -151,10 +121,6 @@ namespace Robomongo
     void EulaDialog::accept()
     {
         saveWindowSettings();
-
-        if(_showFormPage) 
-            postUserData();
-
         QDialog::accept();
     }
 
@@ -209,6 +175,10 @@ namespace Robomongo
 
     void EulaDialog::postUserData() const
     {
+        // Removed for Romo: this used to POST the form data to
+        // https://rm-form.3t.io (Studio 3T's marketing endpoint).
+        if (true)
+            return;
         if (_emailEdit->text().isEmpty() || 
             AppRegistry::instance().settingsManager()->disableHttpsFeatures()
         )
@@ -257,13 +227,13 @@ namespace Robomongo
 
     void EulaDialog::saveWindowSettings() const
     {
-        QSettings settings("3T", "Robomongo");
+        QSettings settings("Romo", "Romo");
         settings.setValue("EulaDialog/size", size());
     }
 
     void EulaDialog::restoreWindowSettings()
     {
-        QSettings settings("3T", "Robomongo");
+        QSettings settings("Romo", "Romo");
         resize(settings.value("EulaDialog/size").toSize());
     }
 

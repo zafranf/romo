@@ -74,9 +74,11 @@ int main(int argc, char *argv[], char** envp)
     app.setAttribute(Qt::AA_UseHighDpiPixmaps);
 #endif
      
-    // EULA License Agreement
+    // EULA License Agreement — shown only if never accepted before. Any past
+    // acceptance counts, so app version bumps don't re-prompt (previously an
+    // exact PROJECT_VERSION match re-showed the dialog on every release).
     auto const& settings { Robomongo::AppRegistry::instance().settingsManager() };
-    if (!settings->acceptedEulaVersions().contains(PROJECT_VERSION)) {
+    if (settings->acceptedEulaVersions().isEmpty()) {
         bool const showFormPage { settings->programExitedNormally() && !settings->disableHttpsFeatures() };
         Robomongo::EulaDialog eulaDialog(showFormPage);
         settings->setProgramExitedNormally(false);

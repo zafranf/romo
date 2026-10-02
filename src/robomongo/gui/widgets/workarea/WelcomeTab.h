@@ -1,6 +1,6 @@
 #pragma once
 
-#ifndef __linux__  // ---------------------- Windows, macOS impl. --------------------------// 
+#if defined(_WIN32)  // ---------------------- Windows impl (WebEngine); Linux & macOS use fallback below --------------------------//
 
 #include <QWidget>
 #include <QWebEnginePage>

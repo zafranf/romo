@@ -46,6 +46,9 @@ namespace Robomongo
         void enterTableMode();
         void enterCustomMode();
         void setScriptFocus();
+
+        /** Inserts a history entry into the console input (View > History). */
+        void insertFromHistory(const QString &text);
         void showAutocompletion();
         void hideAutocompletion();
         void setCurrentDatabase(const std::string &dbname);

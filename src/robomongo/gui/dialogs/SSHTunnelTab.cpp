@@ -161,14 +161,14 @@ namespace Robomongo
         _selectPrivateFileButton->setMaximumHeight(HighDpiConstants::WIN_HIGH_DPI_BUTTON_HEIGHT);
 #endif
 
-        setDisabled(_settings->isReplicaSet());
-        toggleSshCheckboxToolTip(_settings->isReplicaSet());
+        // SSH tunnel now supports replica set connections (one local tunnel per
+        // member), so the tab stays enabled in replica set mode too.
+        // (Previously: setDisabled(_settings->isReplicaSet()) + tooltip.)
     }
 
-    void SshTunnelTab::toggleSshCheckboxToolTip(bool isReplicaSet)
+    void SshTunnelTab::toggleSshCheckboxToolTip(bool /*isReplicaSet*/)
     {
-        _useSsh->setToolTip(!isReplicaSet ? "" :
-            "SSH is currently not supported for Replica Set connections");
+        _useSsh->setToolTip("");
     }
 
     void SshTunnelTab::setPasswordFieldsEnabled(bool enabled)

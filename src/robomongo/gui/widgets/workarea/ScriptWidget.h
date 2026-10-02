@@ -4,6 +4,7 @@
 QT_BEGIN_NAMESPACE
 class QLabel;
 class QCompleter;
+class QKeyEvent;
 QT_END_NAMESPACE
 
 #include "robomongo/core/domain/MongoShellResult.h"
@@ -86,6 +87,9 @@ namespace Robomongo
         void onCompletionActivated(const QString&);
 
     private:
+        /** Up/Down recall of previously executed commands; returns true if handled. */
+        bool handleHistoryKey(QKeyEvent *event);
+
         void configureQueryText();
 
         /**
@@ -116,6 +120,11 @@ namespace Robomongo
         QCompleter *_completer;
         MongoShell *_shell;
         AutoCompletionInfo _currentAutoCompletionInfo;
+
+        // Shared command history navigation (Up/Down recall in the console)
+        QString _connectionName;
+        QString _historyDraft;
+        int _historyIndex = -1;             // -1 = not browsing history
 
         QueryWidget *_parent;
 
