@@ -98,3 +98,6 @@ Desktop.ini
 $RECYCLE.BIN/
 .vscode/settings.json
 .vs/
+
+# Local asset backups (old Robo 3T trademarks + logo masters)
+_logo_backup_*/

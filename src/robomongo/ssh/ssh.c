@@ -1,6 +1,8 @@
 #include "robomongo/ssh/private.h"
 #include "robomongo/ssh/libssh2_config.h"
 
+#include <openssl/crypto.h> // OPENSSL_init_crypto / OPENSSL_INIT_NO_ATEXIT
+
 #ifdef WIN32
 #include <windows.h>
 #include <winsock2.h>
@@ -40,6 +42,15 @@ static void rbm_socket_close(rbm_socket_t socket);
  * Returns 0 if succeeded, or a negative value for error.
  */
 int rbm_ssh_init() {
+    // Prevent OpenSSL from registering its OPENSSL_cleanup() atexit handler.
+    // SshTunnelWorker QThreads may still call RAND_bytes() (libssh2 packet
+    // send) while exit() runs static destructors; OPENSSL_cleanup() frees the
+    // global RAND lock under them, which crashed Romo with SIGSEGV on quit.
+    // Skipping atexit cleanup is safe: the OS reclaims everything at process
+    // death anyway. Must run before any other OpenSSL init (this function is
+    // the first call in main()).
+    OPENSSL_init_crypto(OPENSSL_INIT_NO_ATEXIT, NULL);
+
 #ifndef WIN32
     // Ignore SIGPIPE signal. If we will not do that, an attempt to send/write
     // to the socket that do not have readers will force OS to generate SIGPIPE
