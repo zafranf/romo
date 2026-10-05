@@ -31,6 +31,15 @@ namespace Robomongo
         int port() const { return _port; }
         void setPort(const int port) { _port = port; }
 
+        /**
+         * Fixed local port for the SSH tunnel (127.0.0.1:<port>).
+         * 0 = pick a random free port (previous behavior).
+         * For replica sets this is the base port: one port per member
+         * (base, base+1, ...) in member list order.
+         */
+        int localPort() const { return _localPort; }
+        void setLocalPort(const int localPort) { _localPort = localPort; }
+
         std::string userName() const { return _userName; }
         void setUserName(const std::string &userName) { _userName = userName; }
 
@@ -75,6 +84,9 @@ namespace Robomongo
         std::string _publicKeyFile;
         std::string _passphrase;        // clear text passphrase (decrypted)
         std::string _authMethod; // "password" or "publickey"
+
+        // Fixed local tunnel port (0 = random free port)
+        int _localPort;
 
         // Should we ask user about password or passphrase
         // each time when we try to connect

@@ -659,6 +659,15 @@ rbm_socket_t socket_listen(struct rbm_session *rsession, char *ip, int *port) {
     rbm_socket_t listensock;
     struct sockaddr_in sin;
 
+    // Validate before creating the socket (guards hand-edited configs:
+    // localport is unsigned, values > INT_MAX come through as negative)
+    if (*port < 0 || *port > 65535) {
+        errno = 0; // not a syscall failure: drop stale errno so the log
+                   // doesn't prepend an unrelated "Address already in use"
+        ssh_log_error(rsession, "Invalid local port %d (expected 0-65535, where 0 = random free port)", *port);
+        return rbm_socket_invalid;
+    }
+
 #ifdef WIN32
     char sockopt;
 #else
@@ -674,9 +683,10 @@ rbm_socket_t socket_listen(struct rbm_session *rsession, char *ip, int *port) {
     }
 
     sin.sin_family = AF_INET;
-    sin.sin_port = htons(0); // Bind to any available port (htons is not needed, but still it's here)
+    sin.sin_port = htons((unsigned short)*port); // 0 = let the OS pick a free port
     if (INADDR_NONE == (sin.sin_addr.s_addr = inet_addr(ip))) {
         ssh_log_error(rsession, "inet_addr");
+        rbm_socket_close(listensock);
         return rbm_socket_invalid;
     }
 
@@ -684,12 +694,14 @@ rbm_socket_t socket_listen(struct rbm_session *rsession, char *ip, int *port) {
     setsockopt(listensock, SOL_SOCKET, SO_REUSEADDR, &sockopt, sizeof(sockopt));
     sinlen = sizeof(sin);
     if (-1 == bind(listensock, (struct sockaddr *)&sin, sinlen)) {
-        ssh_log_error(rsession, "Cannot bind to port %d", port);
+        ssh_log_error(rsession, "Cannot bind to local port %d on %s (already in use by another tunnel or service?)", *port, ip);
+        rbm_socket_close(listensock);
         return rbm_socket_invalid;
     }
 
     if (-1 == listen(listensock, 2)) {
         ssh_log_error(rsession, "Failed to listen opened socket");
+        rbm_socket_close(listensock);
         return rbm_socket_invalid;
     }
 

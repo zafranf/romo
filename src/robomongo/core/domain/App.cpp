@@ -146,6 +146,33 @@ namespace Robomongo
             pending.type = type;
             pending.remaining = static_cast<int>(members.size());
 
+            // Fixed tunnel port (ssh.localPort > 0) acts as a base: members
+            // get base, base+1, ... in list order. 0 = each member random.
+            int const baseLocalPort = connSettings->sshSettings()->localPort();
+            int memberIndex = 0;
+
+            // Diagnostic "Test" spawns its own parallel tunnels — give them
+            // random ports, or they'd collide with the live connection's
+            // fixed-port tunnels (bind would fail with "already in use").
+            bool const testTunnels = (type == ConnectionTest);
+
+            // Fail fast with a readable error instead of letting htons()
+            // silently wrap ports past 65535 (hand-edited config safety net;
+            // the Advanced tab validates this on save as well).
+            if (baseLocalPort > 0
+                && baseLocalPort + static_cast<int>(members.size()) - 1 > 65535) {
+                std::string const msg = "Tunnel local port " + std::to_string(baseLocalPort)
+                    + " is too high for " + std::to_string(members.size())
+                    + " replica set member(s): ports "
+                    + std::to_string(baseLocalPort) + "-"
+                    + std::to_string(baseLocalPort + static_cast<int>(members.size()) - 1)
+                    + " must all be <= 65535. Lower the port in Connection Settings > SSH.";
+                LOG_MSG(QString::fromStdString(msg), mongo::logger::LogSeverity::Error());
+                _bus->publish(new ConnectionFailedEvent(
+                    this, _lastServerHandle, type, msg, ConnectionFailedEvent::SshConnection));
+                return nullptr;
+            }
+
             for (auto const& member : members) {
                 auto const sepPos = member.find_last_of(':');
                 std::string const host = (sepPos == std::string::npos)
@@ -156,11 +183,16 @@ namespace Robomongo
                 ConnectionSettings* memberSettings = connSettings->clone();
                 memberSettings->setServerHost(host);
                 memberSettings->setServerPort(port);
+                if (testTunnels)
+                    memberSettings->sshSettings()->setLocalPort(0);
+                else if (baseLocalPort > 0)
+                    memberSettings->sshSettings()->setLocalPort(baseLocalPort + memberIndex);
 
                 auto* sshWorker = new SshTunnelWorker(memberSettings);
                 _pendingSshMemberByWorker[sshWorker] = member;
                 _bus->send(sshWorker, new EstablishSshConnectionRequest(
                     this, _lastServerHandle, sshWorker, memberSettings, type));
+                ++memberIndex;
             }
 
             _pendingMultiSsh[_lastServerHandle] = pending;
@@ -175,6 +207,10 @@ namespace Robomongo
             .arg(connSettings->sshSettings()->port()), mongo::logger::LogSeverity::Info());
 
         ConnectionSettings* settingsCopy = connSettings->clone();
+        // Diagnostic "Test" runs parallel to any live connection: use a random
+        // port so it can't collide with the live tunnel's fixed port.
+        if (type == ConnectionTest)
+            settingsCopy->sshSettings()->setLocalPort(0);
         SshTunnelWorker* sshWorker = new SshTunnelWorker(settingsCopy);
         _bus->send(sshWorker, new EstablishSshConnectionRequest(this, _lastServerHandle, sshWorker, settingsCopy, type));
         return nullptr;

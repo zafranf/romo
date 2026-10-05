@@ -5,6 +5,7 @@
 #include <QLineEdit>
 #include <QGridLayout>
 #include <QRegExpValidator>
+#include <QIntValidator>
 #include <QCheckBox>
 #include <QPushButton>
 #include <QFileDialog>
@@ -17,6 +18,7 @@
 #include "robomongo/gui/GuiRegistry.h"
 #include "robomongo/gui/utils/ComboBoxUtils.h"
 #include "robomongo/core/settings/ConnectionSettings.h"
+#include "robomongo/core/settings/ReplicaSetSettings.h"
 #include "robomongo/core/settings/SshSettings.h"
 #include "robomongo/gui/utils/GuiConstants.h"
 
@@ -128,6 +130,31 @@ namespace Robomongo
         connectionLayout->addWidget(_passphraseEchoModeButton,     8, 2);
         connectionLayout->addWidget(_askForPassword,               9, 1, 1, 2);
 
+        // --- Local Tunnel: fixed local port for the tunnel endpoint ---
+        _localTunnelLabel = new QLabel("Local Tunnel:");
+        _localTunnelLabel->setContentsMargins(0, 8, 0, 0);
+        _localTunnelLabel->setToolTip(
+            "Fix the tunnel's local port (127.0.0.1:<port>) instead of a random one, "
+            "so external tools (mongosh, Compass, your app) can connect through it "
+            "while Romo is connected.");
+
+        _useLocalTunnel = new QCheckBox; // bare toggle: label lives to its left
+        _useLocalTunnel->setChecked(info->localPort() > 0);
+        VERIFY(connect(_useLocalTunnel, SIGNAL(stateChanged(int)),
+                       this, SLOT(localTunnelStateChanged(int))));
+
+        _localPortEdit = new QLineEdit(
+            info->localPort() > 0 ? QString::number(info->localPort()) : QStringLiteral("27017"));
+        _localPortEdit->setFixedWidth(70);
+        _localPortEdit->setValidator(new QIntValidator(1, 65535, this));
+        _localPortEdit->setToolTip(
+            "Local port for the tunnel (1-65535). For replica sets this is the base "
+            "port; members get consecutive ports (base, base+1, ...).");
+
+        connectionLayout->addWidget(_localTunnelLabel,            11, 0);
+        connectionLayout->addWidget(_useLocalTunnel,              11, 1);
+        connectionLayout->addWidget(_localPortEdit,               12, 1);
+
         QVBoxLayout *mainLayout = new QVBoxLayout;
         mainLayout->addWidget(_useSsh);
         mainLayout->addLayout(connectionLayout);
@@ -161,9 +188,19 @@ namespace Robomongo
         _selectPrivateFileButton->setMaximumHeight(HighDpiConstants::WIN_HIGH_DPI_BUTTON_HEIGHT);
 #endif
 
-        // SSH tunnel now supports replica set connections (one local tunnel per
-        // member), so the tab stays enabled in replica set mode too.
+        // SSH tunnel now supports replica sets (one local tunnel per member),
+        // so the tab stays enabled in replica set mode too.
         // (Previously: setDisabled(_settings->isReplicaSet()) + tooltip.)
+
+        // Initial enable state for the Local Tunnel controls
+        localTunnelStateChanged(_useLocalTunnel->checkState());
+    }
+
+    void SshTunnelTab::localTunnelStateChanged(int state)
+    {
+        bool const checked = state == Qt::Checked;
+        // Port field only makes sense while the tunnel itself is on
+        _localPortEdit->setEnabled(checked && _useSsh->isChecked());
     }
 
     void SshTunnelTab::toggleSshCheckboxToolTip(bool /*isReplicaSet*/)
@@ -208,6 +245,11 @@ namespace Robomongo
         _sshAuthMethodLabel->setEnabled(checked);
 
         _askForPassword->setEnabled(checked);
+
+        // Local Tunnel group lives under the SSH tunnel master switch
+        _localTunnelLabel->setEnabled(checked);
+        _useLocalTunnel->setEnabled(checked);
+        localTunnelStateChanged(_useLocalTunnel->checkState());
 
         askForPasswordStateChanged(_askForPassword->checkState());
 
@@ -288,6 +330,38 @@ namespace Robomongo
             }
         }
 
+        // --- Local Tunnel: fixed local port ---
+        int localPort = 0;
+        if (_useLocalTunnel->isChecked()) {
+            QString const portText = _localPortEdit->text().trimmed();
+            bool portOk = false;
+            int const portValue = portText.toInt(&portOk);
+
+            if (!portOk || portValue < 1 || portValue > 65535) {
+                QMessageBox::information(this, "Settings are incomplete",
+                    "Please enter a local tunnel port between 1 and 65535 "
+                    "(or uncheck \"Local Tunnel\" to use a random port).");
+                return false;
+            }
+
+            if (_settings->isReplicaSet()) {
+                // Fixed port becomes the base: members use base..base+N-1
+                int const memberCount =
+                    static_cast<int>(_settings->replicaSetSettings()->members().size());
+                if (memberCount > 0 && portValue + memberCount - 1 > 65535) {
+                    QMessageBox::information(this, "Settings are incomplete",
+                        QString("Local port %1 is too high for a replica set with %2 member(s): "
+                                "ports %1-%3 must all be <= 65535.")
+                            .arg(portValue)
+                            .arg(memberCount)
+                            .arg(portValue + memberCount - 1));
+                    return false;
+                }
+            }
+
+            localPort = portValue;
+        }
+
         SshSettings *info = _settings->sshSettings();
         info->setHost(QtUtils::toStdString(_sshHostName->text()));
         info->setPort(_sshPort->text().toInt());
@@ -298,6 +372,7 @@ namespace Robomongo
         info->setPassphrase(QtUtils::toStdString(_passphraseBox->text()));
         info->setAuthMethod(QtUtils::toStdString(authMethod));
         info->setEnabled(sshEnabled);
+        info->setLocalPort(localPort);
         return true;
     }
     

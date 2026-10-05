@@ -8,6 +8,12 @@ namespace Robomongo
     SshSettings::SshSettings() :
         _port(22),
         _authMethod("publickey"),
+        // 0 = Local Tunnel off (random port, same as previous behavior).
+        // The SSH tab prefills the port field with 27017 regardless, so
+        // enabling the toggle for a new connection needs no typing.
+        // Configs saved before the Tunnel feature have no "localPort" key;
+        // fromVariant() reads them as 0 too.
+        _localPort(0),
         _enabled(false),
         _askPassword(false),
         _logLevel(1) {
@@ -31,6 +37,7 @@ namespace Robomongo
         map.insert("passphraseEncrypted", passphrase().empty() ? "" : 
                                           QtUtils::toQString(RoboCrypt::encrypt(passphrase())));
         map.insert("method", QtUtils::toQString(authMethod()));
+        map.insert("localPort", localPort());
         map.insert("enabled", enabled());
         map.insert("askPassword", askPassword());
         return map;
@@ -57,6 +64,8 @@ namespace Robomongo
             setPassphrase(RoboCrypt::decrypt((map.value("passphraseEncrypted").toString().toStdString())));
 
         setAuthMethod(QtUtils::toStdString(map.value("method").toString()));
+        // Absent in configs created before the Tunnel feature: 0 = random port
+        setLocalPort(map.value("localPort").toInt());
         setEnabled(map.value("enabled").toBool());
         setAskPassword(map.value("askPassword").toBool());
     }

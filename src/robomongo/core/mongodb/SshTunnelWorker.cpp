@@ -184,7 +184,8 @@ namespace Robomongo
         _remotehost = settings->serverHost();
         _remoteport = settings->serverPort();
         _localip = "127.0.0.1";
-        _localport = 27040;
+        // 0 = let socket_listen() pick a free port; >0 = fixed tunnel port
+        _localport = ssh->localPort();
 
         _userName = ssh->userName();
         _userPassword = ssh->userPassword();
