@@ -5,6 +5,7 @@
 
 class QLabel;
 class QMovie;
+class QTimer;
 
 namespace Robomongo
 {
@@ -26,10 +27,11 @@ namespace Robomongo
         void handle(ConnectionEstablishedEvent *event);
         void handle(ConnectionFailedEvent *event);
         void errorLinkActivated(const QString &link);
+        void onWatchdogTimeout();
 
     private:
 
-        enum State 
+        enum State
         {
             InitialState,
             CompletedState,
@@ -41,12 +43,16 @@ namespace Robomongo
         void connectionStatus(State state);
         void authStatus(State state);
         void listStatus(State state);
+        QString serverAddressText() const;
 
         ConnectionSettings *_connSettings;
         QIcon _yesIcon;
         QIcon _noIcon;
         QIcon _questionIcon;
         QMovie *_loadingMovie;
+        QTimer *_watchdog;
+        bool _finished;
+        int _timeoutSec;
 
         QPixmap _yesPixmap;
         QPixmap _noPixmap;

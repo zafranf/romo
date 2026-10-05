@@ -977,6 +977,12 @@ namespace Robomongo
             // Timeout for operations
             // Connect timeout is fixed, but short, at 5 seconds (see headers for DBClientConnection)
             _dbclient.reset(new mongo::DBClientConnection { true, _mongoTimeoutSec });
+            // NOTE: the so_timeout constructor arg is silently dropped by
+            // DBClientConnection (never stored) - without this call the socket
+            // timeout stays unset and the isMaster/auth/listdatabases reads
+            // can block forever when the server accepts TCP but never replies
+            // (e.g. TLS version/credential mismatch).
+            _dbclient->setSoTimeout(_mongoTimeoutSec);
             mongo::Status const& status = _dbclient->connect(_connSettings->hostAndPort(), APP_NAME_VERSION);
             if (!status.isOK() && mayReturnNull) 
                 return { nullptr, status.reason() };
@@ -1087,6 +1093,10 @@ namespace Robomongo
     std::string MongoWorker::connectAndGetReplicaSetName() const
     {
         auto const dbclientTemp { std::make_unique<mongo::DBClientConnection>(true, 10) };
+        // Same as getConnection(): the ctor's so_timeout arg is ignored by
+        // DBClientConnection, so set it explicitly - otherwise rs.status()
+        // below could wait forever on a silent server.
+        dbclientTemp->setSoTimeout(_mongoTimeoutSec);
         std::string setName = "";
 
         // Try connecting to the nodes one by one until getting replica set name.

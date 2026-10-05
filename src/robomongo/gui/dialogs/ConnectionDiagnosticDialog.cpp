@@ -6,12 +6,14 @@
 #include <QPushButton>
 #include <QMovie>
 #include <QMessageBox>
+#include <QTimer>
 
 #include "robomongo/core/settings/ConnectionSettings.h"
 #include "robomongo/core/settings/CredentialSettings.h"
 #include "robomongo/core/settings/SshSettings.h"
 #include "robomongo/core/settings/SslSettings.h"
 #include "robomongo/core/settings/ReplicaSetSettings.h"
+#include "robomongo/core/settings/SettingsManager.h"
 #include "robomongo/gui/GuiRegistry.h"
 #include "robomongo/core/AppRegistry.h"
 #include "robomongo/core/domain/App.h"
@@ -25,6 +27,9 @@ namespace Robomongo
     ConnectionDiagnosticDialog::ConnectionDiagnosticDialog(ConnectionSettings *connection, QWidget *parent) :
         QDialog(parent),
         _connSettings(connection->clone()),
+        _watchdog(nullptr),
+        _finished(false),
+        _timeoutSec(0),
         _server(NULL),
         _serverHandle(0),
         _continueExec(true)
@@ -102,6 +107,18 @@ namespace Robomongo
         }
 
         _serverHandle = AppRegistry::instance().app()->getLastServerHandle();
+
+        // Watchdog: if the server accepts TCP but never replies (typically a
+        // TLS mismatch), no terminal event would ever arrive and the spinner
+        // rows would run forever. Fail the test after a bounded budget:
+        // 5x mongoTimeoutSec (connect/auth/listdatabases + replica set member
+        // loop), but at least 60 seconds.
+        _timeoutSec = qMax(60, static_cast<int>(
+            AppRegistry::instance().settingsManager()->mongoTimeoutSec() * 5));
+        _watchdog = new QTimer(this);
+        _watchdog->setSingleShot(true);
+        VERIFY(connect(_watchdog, SIGNAL(timeout()), this, SLOT(onWatchdogTimeout())));
+        _watchdog->start(_timeoutSec * 1000);
     }
 
     ConnectionDiagnosticDialog::~ConnectionDiagnosticDialog() {
@@ -142,27 +159,31 @@ namespace Robomongo
         }
     }
 
+    QString ConnectionDiagnosticDialog::serverAddressText() const
+    {
+        if (!_connSettings->isReplicaSet())
+            return QString::fromStdString(_connSettings->getFullAddress());
+
+        QString replicaSetStr = QString::fromStdString(_connSettings->connectionName()) + " [Replica Set]";
+        replicaSetStr = (_connSettings->replicaSetSettings()->members().size() > 0)
+                        ? replicaSetStr + '(' + QString::fromStdString(
+                                                    _connSettings->replicaSetSettings()->members()[0]) + ')'
+                        : replicaSetStr + "";
+        return replicaSetStr;
+    }
+
     void ConnectionDiagnosticDialog::connectionStatus(State state)
     {
         // Add info about tunneling if SSH or SSL is used
         QString tunnelNote("");    // No tunnel info when neither SSH nor SSL enabled
-        if (_connSettings->sshSettings()->enabled()) 
+        if (_connSettings->sshSettings()->enabled())
             tunnelNote = " via SSH tunnel";
         else if (_connSettings->sslSettings()->sslEnabled())
             tunnelNote = " via TLS tunnel";
         else
             tunnelNote = "";
-         
 
-        auto replicaSetStr = QString::fromStdString(_connSettings->connectionName()) + " [Replica Set]";
-        replicaSetStr = (_connSettings->replicaSetSettings()->members().size() > 0) 
-                        ? replicaSetStr + '(' + QString::fromStdString(
-                                                    _connSettings->replicaSetSettings()->members()[0]) + ')'
-                        : replicaSetStr + "";
-
-        QString const& serverAddress = _connSettings->isReplicaSet()
-                                       ? replicaSetStr
-                                       : QString::fromStdString(_connSettings->getFullAddress());
+        QString const& serverAddress = serverAddressText();
 
         // Set main info text at dialog
         if (state == InitialState) {
@@ -238,6 +259,10 @@ namespace Robomongo
         if (event->connectionType != ConnectionTest)
             return;
 
+        _finished = true;
+        if (_watchdog)
+            _watchdog->stop();
+
         sshStatus(CompletedState);
         connectionStatus(CompletedState);
         authStatus(CompletedState);
@@ -250,6 +275,10 @@ namespace Robomongo
     void ConnectionDiagnosticDialog::handle(ConnectionFailedEvent *event) {
         if (event->connectionType != ConnectionTest || event->serverHandle != _serverHandle)
             return;
+
+        _finished = true;
+        if (_watchdog)
+            _watchdog->stop();
 
         sshStatus(CompletedState);
         connectionStatus(CompletedState);
@@ -285,5 +314,37 @@ namespace Robomongo
             _lastErrorMessage = event->message;
             _viewErrorLink->show();
         }
+    }
+
+    void ConnectionDiagnosticDialog::onWatchdogTimeout()
+    {
+        if (_finished)
+            return;
+        _finished = true;
+
+        // No terminal event ever arrived: every row is still spinning.
+        // Report a bounded failure instead of loading forever.
+        if (_connSettings->sshSettings()->enabled()) {
+            _sshIconLabel->setPixmap(_questionPixmap);
+            _sshLabel->setText(QString(
+                "SSH status unknown: no response after %1 seconds").arg(_timeoutSec));
+        }
+
+        _connectionIconLabel->setPixmap(_noPixmap);
+        _connectionLabel->setText(QString(
+            "Timed out after %1 seconds connecting to <b>%2</b> - server accepted "
+            "the connection but never replied").arg(_timeoutSec).arg(serverAddressText()));
+
+        authStatus(NotPerformedState);
+        listStatus(NotPerformedState);
+
+        _lastErrorMessage =
+            "The connection test did not complete within " + std::to_string(_timeoutSec) + " seconds.\n\n"
+            "Typical causes:\n"
+            "- TLS settings do not match the server (check the TLS tab)\n"
+            "- a firewall or the server silently drops the packets\n"
+            "- an unreachable replica set member\n\n"
+            "Fix the settings and run the test again.";
+        _viewErrorLink->show();
     }
 }
