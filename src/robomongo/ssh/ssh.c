@@ -106,6 +106,7 @@ struct rbm_ssh_session *rbm_ssh_session_create(struct rbm_ssh_tunnel_config *con
     session->config = config;
     session->channels = NULL;
     session->channelssize = 0;
+    session->stopflag = 0;
     session->lasterror[0] = '\0';
 
     // Check that loglevel is valid
@@ -144,6 +145,13 @@ void rbm_ssh_session_close(struct rbm_ssh_session *sshsession) {
     ssh_log_debug(session, "SSH tunnel successfully closed.");
     free(session);
     free(sshsession);
+}
+
+void rbm_ssh_tunnel_stop(struct rbm_ssh_session *sshsession) {
+    if (!sshsession || !sshsession->handle)
+        return;
+    struct rbm_session *session = (struct rbm_session *)sshsession->handle;
+    session->stopflag = 1;
 }
 
 int rbm_ssh_open_tunnel(struct rbm_ssh_session *sshsession) {
@@ -341,6 +349,11 @@ int rbm_open_tunnel(struct rbm_session *connection) {
 
     while (errors < maxerrors) {
 
+        // Explicit stop request (worker teardown): leave via the normal
+        // close path below
+        if (connection->stopflag)
+            break;
+
         readset = masterset; // copy set
 
         // If local (accept) socket is closed, it means that
@@ -348,11 +361,22 @@ int rbm_open_tunnel(struct rbm_session *connection) {
         if (!FD_ISSET(local_socket, &readset))
             break;
 
+        // Bounded wait so stopflag is honored within half a second
+        // (shutdown() on a listening socket does not wake select on macOS)
+        struct timeval tv;
+        tv.tv_sec = 0;
+        tv.tv_usec = 500000;
+
         ssh_log_debug(connection, "* Okay, we are ready to select.");
-        if (select(fdmax + 1, &readset, NULL, NULL, NULL) == -1) {
+        int selected = select(fdmax + 1, &readset, NULL, NULL, &tv);
+        if (selected == -1) {
+            if (errno == EINTR)
+                continue;
             ssh_log_error(connection, "Error on select()");
             break;
         }
+        if (selected == 0)
+            continue; // timeout: loop back and re-check stopflag
         ssh_log_debug(connection, "* Selected!");
 
         // Run through the existing connections looking for data to read
@@ -388,7 +412,12 @@ int rbm_open_tunnel(struct rbm_session *connection) {
             }
 
             if (rc == RBM_CHANNEL_CREATION_ERROR) {
-                return RBM_CHANNEL_CREATION_ERROR;
+                // Per-client failure only (remote member refused/unreachable,
+                // its client socket is already closed above). Keep the
+                // tunnel - other members and future clients still need it.
+                // Real SSH death is detected separately via socket EOF.
+                ssh_log_warn(connection, "Client channel could not be created; tunnel stays up");
+                continue;
             }
         }
     }
@@ -459,12 +488,21 @@ static int handle_new_client_connections(struct rbm_session *connection, int *fd
 
     if (!channel) {
         ssh_log_error(connection, "Failed to create SSH channel");
+        // The client was accepted already: close it NOW so it gets a fast
+        // failure instead of hanging forever waiting for a channel that
+        // will never exist (mongosh/Compass then waited for their own
+        // timeout - 60s of "stuck")
+        FD_CLR(newfd, masterset);
+        rbm_socket_close(newfd);
         return RBM_CHANNEL_CREATION_ERROR;
     }
 
     if (rbm_channel_create(connection, newfd, channel) == NULL) {
         return RBM_ERROR;
     }
+
+    // Re-arm the SSH socket if the idle-state branch parked it earlier
+    FD_SET(connection->sshsocket, masterset);
 
     return RBM_SUCCESS;
 }
@@ -479,8 +517,26 @@ static int handle_ssh_connections(struct rbm_session *connection, fd_set *master
     ssh_log_debug(connection, "[%d]  <-  Number of channels", connection->channelssize);
 
     if (connection->channelssize == 0) {
-        FD_CLR(connection->localsocket, masterset); // remove from master set
-        FD_CLR(connection->sshsocket, masterset);   // remove from master set
+        // Readable with no channels yet: this is either a real peer
+        // shutdown OR legit post-auth protocol traffic (OpenSSH sends a
+        // hostkeys-00@openssh.com global request right after publickey
+        // auth). Killing the tunnel on any readable event raced client
+        // connections: the seed tunnel got its client in time while idle
+        // member tunnels were silently torn down seconds after setup.
+        char peekbuf[1];
+        ssize_t peeked = recv(connection->sshsocket, peekbuf, sizeof(peekbuf),
+                              MSG_PEEK | MSG_DONTWAIT);
+        if (peeked == 0 || (peeked < 0 && errno != EAGAIN && errno != EWOULDBLOCK)) {
+            // Real EOF (or hard socket error): the server is gone
+            ssh_log_debug(connection, "SSH socket closed with no channels, shutting tunnel down");
+            FD_CLR(connection->localsocket, masterset); // remove from master set
+            FD_CLR(connection->sshsocket, masterset);   // remove from master set
+            return RBM_SUCCESS;
+        }
+        // Pending protocol bytes: park the SSH socket until a client channel
+        // exists (the next channel open pumps libssh2, which consumes such
+        // packets). The listener stays armed - the tunnel must survive.
+        FD_CLR(connection->sshsocket, masterset);
         return RBM_SUCCESS;
     }
 
@@ -573,15 +629,13 @@ static int handle_client_connections(struct rbm_session *connection, rbm_socket_
             ssh_log_error(connection, "Error when recv()");
         }
 
-        // In both these cases, close and cleanup connection
-//        rbm_socket_close(context->socket); // bye!
+        // In both these cases, close and cleanup this client connection.
+        // NOTE: the tunnel itself stays up when the last client leaves -
+        // these fixed local ports are persistent endpoints (external tools
+        // and replica-set probes connect and disconnect repeatedly). The
+        // tunnel now ends only on real SSH EOF/error or explicit stop.
         FD_CLR(context->socket, masterset); // remove from master set
         rbm_channel_close(context);
-
-        if (connection->channelssize == 0) {
-            FD_CLR(connection->localsocket, masterset); // remove from master set
-            FD_CLR(connection->sshsocket, masterset);   // remove from master set
-        }
 
         return result;
     }

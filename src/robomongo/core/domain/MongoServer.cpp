@@ -43,11 +43,24 @@ namespace Robomongo {
         return _connSettings.get();
     }
 
+    void MongoServer::addSshTunnelWorker(SshTunnelWorker *worker)
+    {
+        _sshWorkers.append(QPointer<SshTunnelWorker>(worker));
+    }
+
     MongoServer::~MongoServer() {
         clearDatabases();
 
         if (_worker) {
             _worker->stopAndDelete();
+        }
+
+        // Stop SSH tunnel workers (closes local listeners + SSH sessions).
+        // QPointer auto-skips workers that already stopped and deleted
+        // themselves after a tunnel error.
+        for (auto const &sshWorker : _sshWorkers) {
+            if (sshWorker)
+                sshWorker->stopAndDelete();
         }
 
         // MongoWorker "_worker" is not deleted here, because it is now owned by

@@ -48,6 +48,7 @@ struct rbm_channel {
 struct rbm_session {
     rbm_socket_t localsocket;
     rbm_socket_t sshsocket;
+    volatile int stopflag;      // set from another thread to end the accept loop
     LIBSSH2_SESSION *sshsession;
     struct rbm_ssh_tunnel_config *config;
 

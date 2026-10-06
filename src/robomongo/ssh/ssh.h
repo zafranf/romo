@@ -62,6 +62,9 @@ void rbm_ssh_cleanup();
 struct rbm_ssh_session* rbm_ssh_session_create(struct rbm_ssh_tunnel_config *config);
 int rbm_ssh_open_tunnel(struct rbm_ssh_session *connection);
 int rbm_ssh_session_setup(struct rbm_ssh_session *session);
+// Ask the accept loop (rbm_ssh_open_tunnel) to exit cleanly. Thread-safe;
+// picked up within one select() tick (500ms).
+void rbm_ssh_tunnel_stop(struct rbm_ssh_session *sshsession);
 void rbm_ssh_session_close(struct rbm_ssh_session *session);
 
 

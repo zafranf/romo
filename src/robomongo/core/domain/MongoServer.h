@@ -1,5 +1,6 @@
 #pragma once
 #include <QObject>
+#include <QPointer>
 
 #include "robomongo/core/settings/ConnectionSettings.h"
 #include "robomongo/core/events/MongoEvents.h"
@@ -10,6 +11,7 @@ namespace Robomongo
     class MongoDatabase;
     class EventBus;
     class App;
+    class SshTunnelWorker;
 
     // Messages
     struct EstablishConnectionResponse;
@@ -101,6 +103,13 @@ namespace Robomongo
         void loadDatabases();
         MongoWorker *const worker() const { return _worker; }
 
+        /**
+         * @brief Register an SSH tunnel worker serving this connection;
+         * it is stopped (listener + SSH socket closed) when the server
+         * is destroyed, i.e. on disconnect.
+         */
+        void addSshTunnelWorker(SshTunnelWorker *worker);
+
         ReplicaSet* replicaSetInfo() const { return _replicaSetInfo.get(); }
 
         void handle(ReplicaSetRefreshed *event);
@@ -125,6 +134,7 @@ namespace Robomongo
         void hideProgressBar() const;
 
         MongoWorker *_worker;
+        QList<QPointer<SshTunnelWorker>> _sshWorkers;
         std::unique_ptr<ConnectionSettings> _connSettings;
         EventBus *_bus;
         App *_app;

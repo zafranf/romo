@@ -190,8 +190,9 @@ namespace Robomongo
 
                 auto* sshWorker = new SshTunnelWorker(memberSettings);
                 _pendingSshMemberByWorker[sshWorker] = member;
+                pending.workers.push_back(sshWorker);
                 _bus->send(sshWorker, new EstablishSshConnectionRequest(
-                    this, _lastServerHandle, sshWorker, memberSettings, type));
+                        this, _lastServerHandle, sshWorker, memberSettings, type));
                 ++memberIndex;
             }
 
@@ -356,7 +357,24 @@ namespace Robomongo
 
     void App::handle(EstablishSshConnectionResponse *event) {
         if (event->isError()) {
-            _pendingMultiSsh.erase(event->serverHandle);
+            rbDebug("establish FAILED handle=" + std::to_string(event->serverHandle) +
+                    " error=" + event->error().errorMessage());
+
+            // This attempt is dead: stop every tunnel it already spawned.
+            // Established members would otherwise keep their ports and the
+            // next retry dies with "Address already in use". Keep the
+            // _pendingSshMemberByWorker entries so late success responses
+            // hit the orphan branch below and stop themselves there.
+            auto pendingIt = _pendingMultiSsh.find(event->serverHandle);
+            if (pendingIt != _pendingMultiSsh.end()) {
+                for (auto *sshWorker : pendingIt->second.workers) {
+                    if (sshWorker != event->worker)
+                        sshWorker->stopAndDelete();
+                }
+                _pendingMultiSsh.erase(pendingIt);
+            }
+            _pendingSshMemberByWorker.erase(event->worker);
+
             _bus->publish(new ConnectionFailedEvent(
                 this, event->serverHandle, event->connectionType, event->error().errorMessage(),
                 ConnectionFailedEvent::SshConnection));
@@ -391,28 +409,39 @@ namespace Robomongo
 
             int const serverHandle = event->serverHandle;
             ConnectionType const connectionType = event->connectionType;
+            auto sshWorkers = std::move(pendingIt->second.workers);
             _pendingMultiSsh.erase(pendingIt);
 
             auto server = continueOpenServer(serverHandle, mappedSettings, connectionType);
             delete mappedSettings;  // continueOpenServer clones what it needs
+            // The server owns tunnel teardown: closing the connection stops
+            // every member tunnel (listener + SSH socket) via ~MongoServer
+            if (server)
+                for (auto *sshWorker : sshWorkers)
+                    server->addSshTunnelWorker(sshWorker);
             _servers.push_back(move(server));
             return;
         }
 
-        // Orphaned member tunnel of an already failed replica set connection
+        // Orphaned member tunnel of an already failed replica set connection:
+        // tunnels are persistent now, so an orphan must be stopped instead
+        // of being listened on (it would hold its port forever)
         auto orphanIt = _pendingSshMemberByWorker.find(event->worker);
         if (orphanIt != _pendingSshMemberByWorker.end()) {
+            std::string const orphanMember = orphanIt->second;
             _pendingSshMemberByWorker.erase(orphanIt);
-            _bus->send(event->worker, new ListenSshConnectionRequest(
-                this, event->serverHandle, event->connectionType));
+            rbDebug("orphan tunnel stopped member=" + orphanMember +
+                    " handle=" + std::to_string(event->serverHandle));
+            event->worker->stopAndDelete();
             return;
         }
 
         LOG_MSG(QString("SSH tunnel created successfully"), mongo::logger::LogSeverity::Info());
 
-        _servers.push_back(move(
-            continueOpenServer(event->serverHandle, event->settings, event->connectionType, event->localport)
-        ));
+        auto server = continueOpenServer(event->serverHandle, event->settings, event->connectionType, event->localport);
+        if (server)
+            server->addSshTunnelWorker(event->worker);
+        _servers.push_back(move(server));
         _bus->send(event->worker, new ListenSshConnectionRequest(this, event->serverHandle, event->connectionType));
     }
 

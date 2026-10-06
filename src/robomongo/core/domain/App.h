@@ -107,6 +107,7 @@ namespace Robomongo
             ConnectionType type = ConnectionPrimary;
             int remaining = 0;
             std::map<std::string, int> memberLocalPorts;   // "host:port" -> local port
+            std::vector<SshTunnelWorker*> workers;         // established member tunnels
         };
 
         std::map<int, PendingMultiSsh> _pendingMultiSsh;                  // by serverHandle

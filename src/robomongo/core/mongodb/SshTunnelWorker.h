@@ -56,7 +56,11 @@ namespace Robomongo
 
         static void logCallbackHandler(void* context, char *message, int level);
 
-    protected:
+        /**
+         * @brief Stop the tunnel: the accept loop exits within 500ms,
+         * the local listener and SSH session are closed, then the worker
+         * deletes itself. Safe to call from any thread; idempotent.
+         */
         void stopAndDelete();
 
     protected Q_SLOTS: // handlers:

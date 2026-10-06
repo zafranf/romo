@@ -3,6 +3,9 @@
 #include <QThread>
 #include <QElapsedTimer>
 
+#include <cstdio>
+#include <unistd.h>
+
 #include "robomongo/core/utils/QtUtils.h"
 #include "robomongo/core/utils/Logger.h"
 #include "robomongo/core/settings/ConnectionSettings.h"
@@ -38,6 +41,12 @@ namespace Robomongo
 
     void SshTunnelWorker::stopAndDelete() {
         _isQuiting = 1;
+        // The handler may be blocked in rbm_ssh_open_tunnel()'s select();
+        // flag the session so the loop exits within one tick (500ms) and
+        // closes the listener + SSH socket. NULL after the session has
+        // already been closed (freed) by the tunnel loop itself.
+        if (_sshSession)
+            rbm_ssh_tunnel_stop(_sshSession);
         _thread->quit();
     }
 
@@ -49,7 +58,10 @@ namespace Robomongo
             // Additionally configure "rbm_ssh_tunnel_config"
             _configCreator.config()->logcontext = this;
             _configCreator.config()->logcallback = &SshTunnelWorker::logCallbackHandler;
-            _configCreator.config()->loglevel = (rbm_ssh_log_type) _settings->sshSettings()->logLevel(); // RBM_SSH_LOG_TYPE_DEBUG;
+            // Full SSH log while /tmp/romo_debug.log exists (opt-in diagnostics)
+            _configCreator.config()->loglevel = (::access("/tmp/romo_debug.log", F_OK) == 0)
+                ? RBM_SSH_LOG_TYPE_DEBUG
+                : (rbm_ssh_log_type) _settings->sshSettings()->logLevel();
 
             if ((_sshSession = rbm_ssh_session_create(_configCreator.config())) == 0) {
                 // Not much we can say about this error
@@ -136,6 +148,8 @@ namespace Robomongo
             }
 
             log("SSH tunnel stopped normally.", false);
+            // rbm_ssh_open_tunnel() already closed and freed the session
+            _sshSession = NULL;
 
         } catch (const std::exception& ex) {
             reply(event->sender(),
@@ -161,6 +175,16 @@ namespace Robomongo
     void SshTunnelWorker::log(const std::string &message, int level) {
         if (_isQuiting)
             return;
+
+        // Mirror into the gated debug file - the Logger signal has no file
+        // sink, so without this, tunnel errors ("Failed to create SSH
+        // channel", bind failures...) were completely invisible
+        if (::access("/tmp/romo_debug.log", F_OK) == 0) {
+            if (FILE *f = std::fopen("/tmp/romo_debug.log", "a")) {
+                std::fprintf(f, "[ssh lvl%d] %s\n", level, message.c_str());
+                std::fclose(f);
+            }
+        }
 
         AppRegistry::instance().bus()->send(
             AppRegistry::instance().app(),
