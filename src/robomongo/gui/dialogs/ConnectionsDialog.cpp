@@ -85,6 +85,12 @@ namespace Robomongo
             if (_connection->sshSettings()->enabled())
                 setText(2, text(2) + (text(2).isEmpty() ? "SSH" : ", SSH"));
 
+            // Fixed local tunnel port: show "Tunnel:<port>" while active
+            if (_connection->sshSettings()->enabled() && _connection->sshSettings()->localPort() > 0) {
+                auto const tunnelText = QString("Tunnel:%1").arg(_connection->sshSettings()->localPort());
+                setText(2, text(2) + (text(2).isEmpty() ? tunnelText : ", " + tunnelText));
+            }
+
             // Header "Auth. Database/User" (column[3])
             if (_connection->hasEnabledPrimaryCredential()) {
                 auto primaryCredential { _connection->primaryCredential() };
