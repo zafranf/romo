@@ -2,6 +2,7 @@
 
 #include <QDialog>
 #include <QTreeWidget>
+#include <QElapsedTimer>
 
 #include "robomongo/core/Core.h"
 
@@ -118,11 +119,13 @@ namespace Robomongo
         void dropEvent(QDropEvent *event);
 
 #ifdef __APPLE__
-    // macOS: Set one re-order limit per new connections window. 
-    // Workaround for Qt bug came in Qt 5.12.8.
+    // macOS: Qt >= 5.12.8 fires dropEvent twice per user drop.
     // https://github.com/Studio3T/robomongo/issues/1790
-    private:
-        int _dragDropCount = 0;    
+    // Process the first call and swallow only the near-simultaneous
+    // duplicate, so reordering keeps working instead of being limited
+    // to one drop per window.
+    QElapsedTimer _dropTimer;
+    bool _dropGuarded = false;
 #endif
     };
 }

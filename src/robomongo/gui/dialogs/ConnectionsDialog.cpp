@@ -467,13 +467,15 @@ namespace Robomongo
     void ConnectionsTreeWidget::dropEvent(QDropEvent *event)
     {
 #ifdef __APPLE__
-        if(_dragDropCount > 0)
+        // macOS duplicate dropEvent (robomongo#1790): the second call of
+        // the same drop arrives immediately — swallow it, but only it.
+        // Arming the guard before processing also covers re-entrant calls.
+        if (_dropGuarded && _dropTimer.elapsed() < 500)
             return;
+        _dropGuarded = true;
+        _dropTimer.restart();
 #endif
         QTreeWidget::dropEvent(event);
         emit layoutChanged();
-#ifdef __APPLE__
-        ++_dragDropCount;
-#endif
     }
 }
