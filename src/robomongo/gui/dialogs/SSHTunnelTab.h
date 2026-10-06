@@ -44,6 +44,7 @@ namespace Robomongo
         QLabel *_localTunnelLabel;
         QCheckBox *_useLocalTunnel;
         QLineEdit *_localPortEdit;
+        QLabel *_localPortHint;
         QLineEdit *_sshHostName;
         QLineEdit *_userName;
         QLineEdit *_sshPort;

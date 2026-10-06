@@ -4,6 +4,7 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QGridLayout>
+#include <QHBoxLayout>
 #include <QRegExpValidator>
 #include <QIntValidator>
 #include <QCheckBox>
@@ -128,17 +129,27 @@ namespace Robomongo
         connectionLayout->addWidget(_sshPassphraseLabel,           8, 0);
         connectionLayout->addWidget(_passphraseBox,                8, 1);
         connectionLayout->addWidget(_passphraseEchoModeButton,     8, 2);
-        connectionLayout->addWidget(_askForPassword,               9, 1, 1, 2);
+        // Ask row goes in an hbox: a bare checkbox that's wider than its grid
+        // cell gets CENTERED by QGridLayout (~2px left of col1), so it stops
+        // lining up with every other row's checkbox/fields ("1 space" off).
+        QHBoxLayout *askLayout = new QHBoxLayout;
+        askLayout->setContentsMargins(0, 0, 0, 0);
+        askLayout->addWidget(_askForPassword);
+        connectionLayout->addLayout(askLayout,               9, 1, 1, 2);
 
-        // --- Local Tunnel: fixed local port for the tunnel endpoint ---
-        _localTunnelLabel = new QLabel("Local Tunnel:");
-        _localTunnelLabel->setContentsMargins(0, 8, 0, 0);
+        // --- Local Port: fixed local port for the tunnel endpoint ---
+        _localTunnelLabel = new QLabel("Local Port:");
         _localTunnelLabel->setToolTip(
             "Fix the tunnel's local port (127.0.0.1:<port>) instead of a random one, "
             "so external tools (mongosh, Compass, your app) can connect through it "
             "while Romo is connected.");
 
         _useLocalTunnel = new QCheckBox; // bare toggle: label lives to its left
+        // QMacStyle passes a bare checkbox's size hint through the style's
+        // layout-item margins (19px -> 8px): the layout under-allocates it and
+        // the port field ends up overlapping the checkbox. Opt out of that
+        // transform so the widget rect is used as-is.
+        _useLocalTunnel->setAttribute(Qt::WA_LayoutUsesWidgetRect);
         _useLocalTunnel->setChecked(info->localPort() > 0);
         VERIFY(connect(_useLocalTunnel, SIGNAL(stateChanged(int)),
                        this, SLOT(localTunnelStateChanged(int))));
@@ -151,9 +162,37 @@ namespace Robomongo
             "Local port for the tunnel (1-65535). For replica sets this is the base "
             "port; members get consecutive ports (base, base+1, ...).");
 
-        connectionLayout->addWidget(_localTunnelLabel,            11, 0);
-        connectionLayout->addWidget(_useLocalTunnel,              11, 1);
-        connectionLayout->addWidget(_localPortEdit,               12, 1);
+        // Checkbox and port field share one row, gap = one character
+        QHBoxLayout *localPortLayout = new QHBoxLayout;
+        localPortLayout->setContentsMargins(0, 0, 0, 0);
+        localPortLayout->setSpacing(fontMetrics().averageCharWidth());
+        localPortLayout->addWidget(_useLocalTunnel);
+        localPortLayout->addWidget(_localPortEdit);
+        localPortLayout->addStretch();
+
+        // Small hint under the row
+        _localPortHint = new QLabel(
+            "Tunnel listens on 127.0.0.1:<port> while Romo is connected - handy for "
+            "mongosh or Compass. Uncheck for a random port.");
+        _localPortHint->setWordWrap(true);
+        _localPortHint->setStyleSheet("color: gray; font-size: 11px;");
+        _localPortHint->setContentsMargins(0, 0, 0, 0);
+
+        // Stack the hint right under the checkbox line: a separate grid row
+        // put it 16px away (grid spacing + old margin) - too far, halve it.
+        QVBoxLayout *localPortStack = new QVBoxLayout;
+        localPortStack->setContentsMargins(0, 0, 0, 0);
+        localPortStack->setSpacing(8);
+        localPortStack->addLayout(localPortLayout);
+        localPortStack->addWidget(_localPortHint);
+
+        // Label stays in the label column, top-aligned and padded so it sits
+        // optically centered on the checkbox line (the row now also holds the hint)
+        int const labelPad = qMax(0, (_localPortEdit->sizeHint().height()
+                                      - _localTunnelLabel->sizeHint().height()) / 2);
+        _localTunnelLabel->setContentsMargins(0, labelPad, 0, 0);
+        connectionLayout->addWidget(_localTunnelLabel,            11, 0, 1, 1, Qt::AlignTop);
+        connectionLayout->addLayout(localPortStack,               11, 1, 1, 2);
 
         QVBoxLayout *mainLayout = new QVBoxLayout;
         mainLayout->addWidget(_useSsh);
@@ -192,7 +231,7 @@ namespace Robomongo
         // so the tab stays enabled in replica set mode too.
         // (Previously: setDisabled(_settings->isReplicaSet()) + tooltip.)
 
-        // Initial enable state for the Local Tunnel controls
+        // Initial enable state for the Local Port controls
         localTunnelStateChanged(_useLocalTunnel->checkState());
     }
 
@@ -246,9 +285,10 @@ namespace Robomongo
 
         _askForPassword->setEnabled(checked);
 
-        // Local Tunnel group lives under the SSH tunnel master switch
+        // Local Port row lives under the SSH tunnel master switch
         _localTunnelLabel->setEnabled(checked);
         _useLocalTunnel->setEnabled(checked);
+        _localPortHint->setEnabled(checked);
         localTunnelStateChanged(_useLocalTunnel->checkState());
 
         askForPasswordStateChanged(_askForPassword->checkState());
@@ -330,7 +370,7 @@ namespace Robomongo
             }
         }
 
-        // --- Local Tunnel: fixed local port ---
+        // --- Local Port: fixed local port ---
         int localPort = 0;
         if (_useLocalTunnel->isChecked()) {
             QString const portText = _localPortEdit->text().trimmed();
@@ -339,8 +379,8 @@ namespace Robomongo
 
             if (!portOk || portValue < 1 || portValue > 65535) {
                 QMessageBox::information(this, "Settings are incomplete",
-                    "Please enter a local tunnel port between 1 and 65535 "
-                    "(or uncheck \"Local Tunnel\" to use a random port).");
+                    "Please enter a local port between 1 and 65535 "
+                    "(or uncheck \"Local Port\" to use a random port).");
                 return false;
             }
 
