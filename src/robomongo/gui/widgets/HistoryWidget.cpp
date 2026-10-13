@@ -33,10 +33,10 @@ namespace Robomongo
     namespace
     {
         // Path separator between connection and db/collection in labels and
-        // tooltips. Matches the small filled triangle the explorer tree draws
-        // as its branch indicator, so the two panes read the same way.
+        // tooltips. Matches the thin disclosure chevron the explorer tree
+        // draws as its branch indicator, so the two panes read the same way.
         QString const kCaretSeparator =
-            QString::fromUtf8(" \xE2\x96\xB8 ");     // " ▸ "
+            QString::fromUtf8(" \xE2\x9D\xAF ");     // " ❯ "
 
         /**
          * @brief Keeps a child widget pinned to a corner of its parent.
