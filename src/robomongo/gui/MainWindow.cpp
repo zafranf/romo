@@ -621,7 +621,7 @@ namespace Robomongo
     void MainWindow::createStylesMenu()
     {
         _viewMenu->addSeparator();
-         QMenu *styles = _viewMenu->addMenu(GuiRegistry::instance().mainWindowIcon(), "Theme");
+         QMenu *styles = _viewMenu->addMenu("Theme");
          QStringList supportedStyles = AppStyleUtils::getSupportedStyles();
          QActionGroup *styleGroup = new QActionGroup(this);
          VERIFY(connect(styleGroup, SIGNAL(triggered(QAction *)), this, SLOT(changeStyle(QAction *))));
