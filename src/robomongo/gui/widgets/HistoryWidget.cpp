@@ -439,7 +439,7 @@ namespace Robomongo
             return;
 
         if (chosen == viewAction) {
-            showEntryView(command, connection, database, favorited);
+            showEntryView(command, connection, database);
             return;
         }
         if (chosen == removeHistoryAction) {
@@ -491,7 +491,7 @@ namespace Robomongo
             return;
 
         if (chosen == viewAction) {
-            showEntryView(command, connection, database, true);
+            showEntryView(command, connection, database);
             return;
         }
         if (chosen == removeAction) {
@@ -510,99 +510,218 @@ namespace Robomongo
     }
 
     void HistoryWidget::showEntryView(QString const &command, QString const &connection,
-                                      QString const &database, bool editable)
+                                      QString const &database)
     {
-        // Live copy: after Save every lookup below follows the edited text.
-        QString currentCommand = command;
+        // Live state: edits are applied when the dialog closes or when the
+        // entry changes - there is no Save button.
+        QString currentConnection = connection;
+        QString currentDatabase = database;
+        QString loadedCommand = command;        // identity of the entry on screen
+
+        // Rows of the pane this entry was opened from (top = newest). Captured
+        // once at open; re-matched by item data on every hop, because both
+        // panes are rebuilt whenever history/favorites change.
+        struct EntryRef { QString connection; QString database; QString command; };
+        QList<EntryRef> navList;
+        int navIndex = -1;
+        int dataColumn = 0;
+        QTreeWidget *navTree = nullptr;
+        QTreeWidget *const panes[2] = { _historyTree, _favoritesTree };
+        for (QTreeWidget *pane : panes) {
+            int const col = pane == _historyTree ? 0 : 1;
+            for (int i = 0; i < pane->topLevelItemCount(); ++i) {
+                QTreeWidgetItem *item = pane->topLevelItem(i);
+                if (item->data(col, Qt::UserRole).toString() == command
+                        && item->data(col, Qt::UserRole + 1).toString() == connection) {
+                    navTree = pane;
+                    dataColumn = col;
+                    navIndex = i;
+                    break;
+                }
+            }
+            if (navTree)
+                break;
+        }
+        if (navTree) {
+            for (int i = 0; i < navTree->topLevelItemCount(); ++i) {
+                QTreeWidgetItem *item = navTree->topLevelItem(i);
+                navList.append({ item->data(dataColumn, Qt::UserRole + 1).toString(),
+                                 item->data(dataColumn, Qt::UserRole + 2).toString(),
+                                 item->data(dataColumn, Qt::UserRole).toString() });
+            }
+        }
 
         QDialog dialog(this);
-        dialog.setWindowTitle(editable ? tr("Favorite") : tr("History Entry"));
         dialog.resize(620, 420);
 
-        auto *metaLabel = new QLabel(
-            connection + (database.isEmpty() ? QString() : " / " + database));
+        auto *metaLabel = new QLabel;
         metaLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
 
+        // Prev/next hop through the pane rows so the entry can be browsed
+        // without closing and reopening the dialog.
+        auto *prevButton = new QToolButton;
+        prevButton->setAutoRaise(true);
+        prevButton->setArrowType(Qt::LeftArrow);
+        prevButton->setToolTip(tr("Previous entry (the row above in the list)"));
+        auto *nextButton = new QToolButton;
+        nextButton->setAutoRaise(true);
+        nextButton->setArrowType(Qt::RightArrow);
+        nextButton->setToolTip(tr("Next entry (the row below in the list)"));
+
+        auto *metaRow = new QHBoxLayout;
+        metaRow->setContentsMargins(0, 0, 0, 0);
+        metaRow->addWidget(metaLabel, 1);
+        metaRow->addWidget(prevButton);
+        metaRow->addWidget(nextButton);
+
+        // Favorite name: under the connection/db line, above the query text.
+        auto *nameWidget = new QWidget;
+        auto *nameRow = new QHBoxLayout(nameWidget);
+        nameRow->setContentsMargins(0, 0, 0, 0);
+        auto *nameCaption = new QLabel(tr("Name:"));
+        auto *nameEdit = new QLineEdit;
+        nameEdit->setPlaceholderText(tr("Favorite name"));
+        nameRow->addWidget(nameCaption);
+        nameRow->addWidget(nameEdit, 1);
+
         auto *queryText = new QPlainTextEdit;
-        queryText->setReadOnly(!editable);
         queryText->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
         queryText->setLineWrapMode(QPlainTextEdit::NoWrap);
-        queryText->setPlainText(currentCommand);
+        queryText->setPlainText(loadedCommand);
 
         auto *favoriteButton = new QPushButton;
-        auto refreshFavoriteButton = [this, favoriteButton, &connection, &currentCommand]() {
-            bool const favorited =
-                FavoritesStore::instance().isFavorite(connection, currentCommand);
-            favoriteButton->setText(favorited ? tr("Unfavorite") : tr("Favorite"));
-            favoriteButton->setToolTip(favorited
-                ? tr("Remove this command from favorites")
-                : tr("Add this command to favorites"));
-        };
-        refreshFavoriteButton();
-
-        auto *saveButton = new QPushButton(tr("Save"), &dialog);
-        saveButton->setToolTip(tr("Save changes to this favorite"));
-
-        // Wired AFTER the initial content set, so merely opening the dialog
-        // doesn't count as an edit.
-        VERIFY(connect(queryText, &QPlainTextEdit::textChanged, saveButton,
-                       [saveButton]() { saveButton->setEnabled(true); }));
-        saveButton->setEnabled(false);
-
         auto *pasteButton = new QPushButton(tr("Paste"));
         auto *runButton = new QPushButton(tr("Run"));
         auto *closeButton = new QPushButton(tr("Close"));
 
+        auto refreshHeader = [&]() {
+            bool const favorited = FavoritesStore::instance().isFavorite(
+                currentConnection, loadedCommand);
+            metaLabel->setText(currentConnection
+                               + (currentDatabase.isEmpty()
+                                      ? QString() : " / " + currentDatabase));
+            dialog.setWindowTitle(favorited ? tr("Favorite") : tr("History Entry"));
+            favoriteButton->setText(favorited ? tr("Remove from Favorites")
+                                              : tr("Add to Favorites"));
+            favoriteButton->setToolTip(favorited
+                ? tr("Remove this command from favorites")
+                : tr("Add this command to favorites"));
+            nameWidget->setVisible(favorited);
+            if (favorited)
+                nameEdit->setText(FavoritesStore::instance().labelFor(
+                    currentConnection, loadedCommand));
+            queryText->setReadOnly(!favorited);
+            prevButton->setEnabled(navIndex > 0);
+            nextButton->setEnabled(navIndex >= 0 && navIndex + 1 < navList.size());
+        };
+        refreshHeader();
+
+        auto persistEdits = [&]() {
+            if (!FavoritesStore::instance().isFavorite(currentConnection, loadedCommand))
+                return;
+            QString const newText = queryText->toPlainText().trimmed();
+            if (newText.isEmpty() || newText == loadedCommand)
+                return;
+            FavoritesStore::instance().updateCommand(currentConnection,
+                                                     loadedCommand, newText);
+            loadedCommand = newText;
+            if (navIndex >= 0 && navIndex < navList.size())
+                navList[navIndex].command = newText;
+        };
+
+        auto persistName = [&]() {
+            if (!FavoritesStore::instance().isFavorite(currentConnection, loadedCommand))
+                return;
+            QString const name = nameEdit->text().trimmed();
+            if (name.isEmpty()
+                    || name == FavoritesStore::instance().labelFor(
+                                   currentConnection, loadedCommand))
+                return;
+            FavoritesStore::instance().rename(currentConnection, loadedCommand, name);
+        };
+
+        auto syncPaneSelection = [&]() {
+            if (!navTree)
+                return;
+            for (int i = 0; i < navTree->topLevelItemCount(); ++i) {
+                QTreeWidgetItem *item = navTree->topLevelItem(i);
+                if (item->data(dataColumn, Qt::UserRole).toString() == loadedCommand
+                        && item->data(dataColumn, Qt::UserRole + 1).toString()
+                               == currentConnection) {
+                    navTree->setCurrentItem(item);
+                    navTree->scrollToItem(item, QAbstractItemView::PositionAtCenter);
+                    return;
+                }
+            }
+        };
+
+        auto gotoEntry = [&](int index) {
+            if (index < 0 || index >= navList.size() || index == navIndex)
+                return;
+            persistName();          // focus may stay in the name field
+            persistEdits();
+            navIndex = index;
+            EntryRef const ref = navList[index];
+            currentConnection = ref.connection;
+            currentDatabase = ref.database;
+            loadedCommand = ref.command;
+            queryText->setPlainText(ref.command);
+            refreshHeader();
+            syncPaneSelection();
+        };
+
         auto *buttonRow = new QHBoxLayout;
         buttonRow->addWidget(favoriteButton);
-        if (editable)
-            buttonRow->addWidget(saveButton);
         buttonRow->addStretch();
         buttonRow->addWidget(pasteButton);
         buttonRow->addWidget(runButton);
         buttonRow->addWidget(closeButton);
 
         auto *mainLayout = new QVBoxLayout(&dialog);
-        mainLayout->addWidget(metaLabel);
+        mainLayout->addLayout(metaRow);
+        mainLayout->addWidget(nameWidget);
         mainLayout->addWidget(queryText, 1);
         mainLayout->addLayout(buttonRow);
 
+        // Whatever the dialog's fate (Close, Escape, window X), pending edits
+        // and a renamed favorite are applied on the way out.
+        VERIFY(connect(&dialog, &QDialog::finished, &dialog, [&](int) {
+            persistEdits();
+            persistName();
+        }));
         VERIFY(connect(closeButton, &QPushButton::clicked, &dialog, &QDialog::accept));
-        VERIFY(connect(pasteButton, &QPushButton::clicked, &dialog,
-            [this, &currentCommand, &dialog]() {
-                if (applyEntry(currentCommand, false))
-                    dialog.accept();
-            }));
-        VERIFY(connect(runButton, &QPushButton::clicked, &dialog,
-            [this, &currentCommand, &dialog]() {
-                if (applyEntry(currentCommand, true))
-                    dialog.accept();
-            }));
-        VERIFY(connect(saveButton, &QPushButton::clicked, &dialog,
-            [this, &connection, &currentCommand, queryText, saveButton,
-             &refreshFavoriteButton]() {
-                QString const newText = queryText->toPlainText();
-                FavoritesStore::instance().updateCommand(connection, currentCommand, newText);
-                if (FavoritesStore::instance().isFavorite(connection, newText.trimmed())) {
-                    currentCommand = newText.trimmed();
-                    saveButton->setEnabled(false);
-                    refreshFavoriteButton();
-                }
-            }));
-        VERIFY(connect(favoriteButton, &QPushButton::clicked, &dialog,
-            [this, &connection, &database, &currentCommand, &refreshFavoriteButton]() {
-                if (FavoritesStore::instance().isFavorite(connection, currentCommand)) {
-                    FavoritesStore::instance().remove(connection, currentCommand);
-                    refreshFavoriteButton();
-                    return;
-                }
-                HistoryEntry entry;
-                entry.command = currentCommand;
-                entry.connectionName = connection;
-                entry.databaseName = database;
-                toggleFavorite(entry, true, nullptr);
-                refreshFavoriteButton();
-            }));
+        VERIFY(connect(pasteButton, &QPushButton::clicked, &dialog, [this, queryText, &dialog]() {
+            if (applyEntry(queryText->toPlainText().trimmed(), false))
+                dialog.accept();
+        }));
+        VERIFY(connect(runButton, &QPushButton::clicked, &dialog, [this, queryText, &dialog]() {
+            if (applyEntry(queryText->toPlainText().trimmed(), true))
+                dialog.accept();
+        }));
+        VERIFY(connect(favoriteButton, &QPushButton::clicked, &dialog, [&]() {
+            if (FavoritesStore::instance().isFavorite(currentConnection, loadedCommand)) {
+                FavoritesStore::instance().remove(currentConnection, loadedCommand);
+                refreshHeader();
+                return;
+            }
+            HistoryEntry entry;
+            QString const text = queryText->toPlainText().trimmed();
+            entry.command = text.isEmpty() ? loadedCommand : text;
+            entry.connectionName = currentConnection;
+            entry.databaseName = currentDatabase;
+            toggleFavorite(entry, true, nullptr);   // prompts for the name
+            if (FavoritesStore::instance().isFavorite(currentConnection, entry.command)) {
+                loadedCommand = entry.command;
+                if (navIndex >= 0 && navIndex < navList.size())
+                    navList[navIndex].command = loadedCommand;
+            }
+            refreshHeader();
+        }));
+        VERIFY(connect(nameEdit, &QLineEdit::editingFinished, &dialog, persistName));
+        VERIFY(connect(prevButton, &QToolButton::clicked, &dialog,
+                       [&]() { gotoEntry(navIndex - 1); }));
+        VERIFY(connect(nextButton, &QToolButton::clicked, &dialog,
+                       [&]() { gotoEntry(navIndex + 1); }));
 
         dialog.exec();
     }

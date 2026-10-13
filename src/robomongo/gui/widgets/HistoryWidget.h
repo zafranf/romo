@@ -28,7 +28,8 @@ namespace Robomongo
      *
      *  Shared filter row (search + connection) applies to both panes.
      *  Double-click pastes into the active console. The View dialog offers
-     *  dynamic Favorit/Unfavorit + Paste/Run.
+     *  prev/next row navigation (syncs the pane selection), a favorite name
+     *  field, Add to/Remove from Favorites + Paste/Run.
      *
      *  Earlier models are kept as snapshots (not built):
      *  HistoryWidgetA.{h,cpp} = model A (single integrated list),
@@ -61,7 +62,7 @@ namespace Robomongo
                             QToolButton *starButton);
         bool applyEntry(QString const &command, bool run);
         void showEntryView(QString const &command, QString const &connection,
-                           QString const &database, bool editable);
+                           QString const &database);
 
         MainWindow *_mainWindow;
         QLineEdit *_search;
