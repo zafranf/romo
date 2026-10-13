@@ -1,0 +1,189 @@
+#!/usr/bin/env bash
+#
+# One-shot release: bump version, build, package the DMG, tag, publish.
+#
+#   bin/release patch            0.2.5 -> 0.2.6
+#   bin/release minor            0.2.5 -> 0.3.0   (new features)
+#   bin/release major            0.2.5 -> 1.0.0
+#   bin/release 0.3.0            explicit version
+#   bin/release patch --dry-run  show the plan, change nothing
+#
+# Bump rule: MINOR for new features, PATCH for fixes/renames.
+#
+set -euo pipefail
+
+REPO_SLUG="zafranf/romo"
+DMG_ARCH="macos-arm64"
+MIN_FREE_GB=4          # DMG is ~32MB but hdiutil needs temp room
+
+BIN_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "$(dirname "$BIN_DIR")"
+
+BUMP=""
+DRY_RUN=0
+for arg in "$@"; do
+  case "$arg" in
+    --dry-run) DRY_RUN=1 ;;
+    *) BUMP="$arg" ;;
+  esac
+done
+
+if [[ -z "$BUMP" ]]; then
+  echo "usage: bin/release <patch|minor|major|x.y.z> [--dry-run]" >&2
+  exit 2
+fi
+
+die() { echo "release: $*" >&2; exit 1; }
+
+# --- current version -------------------------------------------------------
+read_ver() { sed -n "s/^set(PROJECT_VERSION_$1 \"\([^\"]*\)\")/\1/p" CMakeLists.txt; }
+CUR_MAJOR=$(read_ver MAJOR); CUR_MINOR=$(read_ver MINOR); CUR_PATCH=$(read_ver PATCH)
+[[ -n "$CUR_MAJOR$CUR_MINOR$CUR_PATCH" ]] || die "could not read PROJECT_VERSION from CMakeLists.txt"
+CUR="${CUR_MAJOR}.${CUR_MINOR}.${CUR_PATCH}"
+
+case "$BUMP" in
+  patch) NEW="$CUR_MAJOR.$CUR_MINOR.$((CUR_PATCH+1))" ;;
+  minor) NEW="$CUR_MAJOR.$((CUR_MINOR+1)).0" ;;
+  major) NEW="$((CUR_MAJOR+1)).0.0" ;;
+  *)     NEW="$BUMP" ;;
+esac
+
+[[ "$NEW" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || die "bad version '$NEW' (want x.y.z)"
+
+# --- preflight -------------------------------------------------------------
+[[ -z "$(git status --porcelain)" ]] || die "working tree not clean; commit or stash first"
+git rev-parse --verify "v$NEW" >/dev/null 2>&1 && die "tag v$NEW already exists"
+
+command -v gh >/dev/null || die "gh CLI not found"
+gh auth status >/dev/null 2>&1 || die "gh not logged in"
+
+FREE_GB=$(df -Pk . | awk 'NR==2 {print int($4/1048576)}')
+[[ "$FREE_GB" -ge "$MIN_FREE_GB" ]] || die "only ${FREE_GB}GB free, need ${MIN_FREE_GB}GB"
+
+PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null || true)
+
+OLD_DMG="romo-${CUR}-${DMG_ARCH}.dmg"
+NEW_DMG="romo-${NEW}-${DMG_ARCH}.dmg"
+DID_UPDATE_README=0
+grep -qF "$OLD_DMG" README.md && DID_UPDATE_README=1
+
+echo "  version   $CUR -> $NEW"
+echo "  prev tag  ${PREV_TAG:-<none>}"
+echo "  dmg       $NEW_DMG"
+echo "  readme    $([[ $DID_UPDATE_README -eq 1 ]] && echo 'will update download link' || echo "NO link for $CUR - skipped")"
+echo "  disk      ${FREE_GB}GB free"
+echo "  publish   $REPO_SLUG"
+
+if [[ $DRY_RUN -eq 1 ]]; then
+  echo
+  echo "dry run - nothing changed"
+  exit 0
+fi
+
+echo
+echo "--- bump version ---"
+sed -i '' "s|^set(PROJECT_VERSION_MAJOR .*|set(PROJECT_VERSION_MAJOR \"${NEW%%.*}\")|" CMakeLists.txt
+sed -i '' "s|^set(PROJECT_VERSION_MINOR .*|set(PROJECT_VERSION_MINOR \"$(echo "$NEW" | cut -d. -f2)\")|" CMakeLists.txt
+sed -i '' "s|^set(PROJECT_VERSION_PATCH .*|set(PROJECT_VERSION_PATCH \"${NEW##*.}\")|" CMakeLists.txt
+NEW_IN_PLIST=$(sed -n 's/^set(PROJECT_VERSION_PATCH "\([^"]*\)")/\1/p' CMakeLists.txt)
+echo "CMakeLists.txt -> $NEW"
+
+if [[ $DID_UPDATE_README -eq 1 ]]; then
+  # dots are regex metacharacters; escape them for the sed pattern
+  esc() { printf '%s' "$1" | sed 's/[.[\*^$]/\\&/g'; }
+  sed -i '' "s|$(esc "$OLD_DMG")|$(esc "$NEW_DMG")|g; s|/v$(esc "$CUR")/|/v$(esc "$NEW")/|g" README.md
+  echo "README.md -> download link now points at $NEW_DMG"
+else
+  echo "README.md -> left alone (no $OLD_DMG link to update)"
+fi
+
+echo
+echo "--- build ---"
+bin/build > /tmp/romo_release_build.log 2>&1 \
+  || { tail -20 /tmp/romo_release_build.log >&2; die "build failed (/tmp/romo_release_build.log)"; }
+bin/install >> /tmp/romo_release_build.log 2>&1 \
+  || { tail -20 /tmp/romo_release_build.log >&2; die "install failed"; }
+INSTALLED=$(defaults read "$PWD/build/release/install/Romo.app/Contents/Info.plist" CFBundleShortVersionString 2>/dev/null || echo "?")
+[[ "$INSTALLED" == "$NEW" ]] || die "Info.plist says $INSTALLED, expected $NEW"
+echo "Romo.app -> $INSTALLED"
+
+echo
+echo "--- package ---"
+PACKAGE_DIR="build/release/package"
+mkdir -p "$PACKAGE_DIR"
+rm -f "$PACKAGE_DIR"/romo-*.dmg
+bin/pack > /tmp/romo_release_pack.log 2>&1 \
+  || { tail -20 /tmp/romo_release_pack.log >&2; die "pack failed (/tmp/romo_release_pack.log)"; }
+DMG_SRC=$(ls -t "$PACKAGE_DIR"/romo-*.dmg 2>/dev/null | head -1)
+[[ -n "$DMG_SRC" ]] || die "CPack produced no DMG"
+mv "$DMG_SRC" "$PACKAGE_DIR/$NEW_DMG"
+SHA=$(shasum -a 256 "$PACKAGE_DIR/$NEW_DMG" | cut -d' ' -f1)
+SIZE_MB=$(du -m "$PACKAGE_DIR/$NEW_DMG" | cut -f1)
+echo "$NEW_DMG  ${SIZE_MB}MB"
+
+echo
+echo "--- release notes ---"
+NOTES=$(mktemp /tmp/romo_release_notes.XXXXXX.md)
+{
+  echo "## Romo $NEW"
+  echo
+  echo "Shell-centric MongoDB management tool for macOS (Apple Silicon)."
+  echo
+  if [[ -n "$PREV_TAG" ]]; then
+    echo "### Changes since $PREV_TAG"
+    echo
+    git log --no-merges --pretty=format:'- %s' "$PREV_TAG..HEAD"
+    echo
+    echo
+  fi
+  echo "### Install"
+  echo
+  echo "1. Download \`$NEW_DMG\` below."
+  echo "2. Open it and drag **Romo** into your Applications folder."
+  echo "3. First launch needs a Gatekeeper workaround (see below)."
+  echo
+  echo "### First launch on macOS"
+  echo
+  echo "This build is **ad-hoc signed** (no Apple Developer ID), so macOS will warn"
+  echo "that the developer cannot be verified. To open it, either:"
+  echo
+  echo "- Right-click **Romo** in Applications → **Open** → **Open** again, or"
+  echo "- Run once in Terminal:"
+  echo
+  echo '```'
+  echo "xattr -cr /Applications/Romo.app"
+  echo '```'
+  echo
+  echo "### Checksum"
+  echo
+  echo '```'
+  echo "$SHA  $NEW_DMG"
+  echo '```'
+} > "$NOTES"
+echo "$(grep -c '^- ' "$NOTES" 2>/dev/null || echo 0) changelog lines"
+
+echo
+echo "--- git ---"
+git add CMakeLists.txt README.md
+git commit -q -m "Release v$NEW"
+git tag -a "v$NEW" -m "Romo $NEW"
+git push origin HEAD 2>&1 | tail -2
+git push origin "v$NEW" 2>&1 | tail -2
+
+echo
+echo "--- publish ---"
+# -R is mandatory: the repo also has an 'upstream' remote (Studio3T/robomongo)
+# and gh resolves that one instead of origin.
+URL=$(gh release create "v$NEW" "$PACKAGE_DIR/$NEW_DMG" \
+  -R "$REPO_SLUG" \
+  --title "Romo $NEW" \
+  --notes-file "$NOTES")
+rm -f "$NOTES"
+
+gh release view "v$NEW" -R "$REPO_SLUG" \
+  --json tagName,isDraft,assets \
+  --jq '"verified: tag=\(.tagName) draft=\(.isDraft) assets=[\(.assets|map(.name+" ("+.state+")")|join(", "))]"'
+
+echo
+echo "done: $URL"
+echo "sha256: $SHA"
