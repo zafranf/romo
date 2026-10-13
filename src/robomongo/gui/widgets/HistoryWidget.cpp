@@ -280,9 +280,11 @@ namespace Robomongo
          * sort spec, or both - every part is named so the reader can tell them
          * apart: "activities, find:{project:1}, project:{user:1},
          * sort:{created_at:-1}". A lone projection or sort is named too.
+         * A trailing op rides along as a bare method name: "activities, {},
+         * count".
          *
          * The walker reads whatever chain follows the collection, so .sort()
-         * and friends are picked up wherever they sit. Commands outside the
+         * .count() .limit() and friends are picked up wherever they sit. Commands outside the
          * db.<coll>.<method>(...) shape - db.hostInfo(), use('db'), a query
          * whose string never closes - fall back to the plain preview. The
          * tooltip still carries the raw command text.
@@ -304,6 +306,7 @@ namespace Robomongo
 
             // Walk the whole .<method>(...) chain after the collection.
             QString filter, projection, sortSpec;
+            QStringList tail;              // count, limit, skip, ... after the find
             bool known = false;
             int i = collMatch.capturedEnd();
             for (;;) {
@@ -333,14 +336,34 @@ namespace Robomongo
                     projection = args.value(1);   // absent -> empty QString
                     known = true;
                 }
-                else if (method == QLatin1String("count")
-                         || method == QLatin1String("countDocuments")
-                         || method == QLatin1String("aggregate")) {
-                    filter = args.value(0);
+                else if (method == QLatin1String("aggregate")) {
+                    filter = args.value(0);       // the pipeline, minified
                     known = true;
                 }
                 else if (method == QLatin1String("sort")) {
                     sortSpec = args.value(0);
+                    known = true;
+                }
+                else if (method == QLatin1String("count")
+                         || method == QLatin1String("countDocuments")) {
+                    // "find({}).count()" tallies the rows the find would return
+                    // - it brings no filter of its own, and overwriting the one
+                    // already collected would erase it. Only when nothing
+                    // filtered ahead of it does its argument count as a filter.
+                    if (filter.isEmpty() && projection.isEmpty())
+                        filter = args.value(0);
+                    tail << method;
+                    known = true;
+                }
+                else if (method == QLatin1String("limit")
+                         || method == QLatin1String("skip")
+                         || method == QLatin1String("batchSize")
+                         || method == QLatin1String("distinct")
+                         || method == QLatin1String("hint")
+                         || method == QLatin1String("max")
+                         || method == QLatin1String("min")) {
+                    QString const arg = minifyJsonish(args.value(0));
+                    tail << (arg.isEmpty() ? method : method + ':' + arg);
                     known = true;
                 }
                 else {
@@ -366,25 +389,30 @@ namespace Robomongo
                 values << minifyJsonish(sortSpec);
             }
 
-            if (values.isEmpty())
+            if (values.isEmpty() && tail.isEmpty())
                 return coll;                      // count() with no filter
 
             // "find({},{b:1})" carries no filter worth naming - drop the {} so
-            // the projection stands alone. Kept when it is all there is, which
-            // is what an unfiltered browse looks like.
-            if (values.size() > 1 && values.first() == QLatin1String("{}")) {
+            // the projection stands alone. Kept when a later op is all that
+            // follows: "activities, {}, count" says the count was unfiltered.
+            if (values.size() > 1 && values.first() == QLatin1String("{}")
+                && (labels.contains(QLatin1String("project"))
+                    || labels.contains(QLatin1String("sort")))) {
                 labels.removeAt(0);
                 values.removeAt(0);
             }
 
             // A lone find filter stays unlabelled; anything else is named so a
-            // projection is never mistaken for the filter itself.
+            // projection is never mistaken for the filter itself. A trailing op
+            // is a bare method name, so it never forces the filter to be named.
             bool const named = values.size() > 1
-                               || labels.first() != QLatin1String("find");
+                               || (values.size() == 1
+                                   && labels.first() != QLatin1String("find"));
             QStringList rendered;
             for (int k = 0; k < values.size(); ++k)
                 rendered << (named ? labels.at(k) + ':' + values.at(k)
                                    : values.at(k));
+            rendered << tail;
             return coll + ", " + rendered.join(QStringLiteral(", "));
         }
     }
