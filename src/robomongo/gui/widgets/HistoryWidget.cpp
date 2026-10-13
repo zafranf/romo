@@ -702,9 +702,14 @@ namespace Robomongo
         buttonRow->addWidget(closeButton);
 
         auto *mainLayout = new QVBoxLayout(&dialog);
+        // Tight: the dialog's style defaults leave a wide gap between the
+        // header rows and the query text.
+        mainLayout->setContentsMargins(8, 8, 8, 8);
+        mainLayout->setSpacing(4);
         mainLayout->addLayout(metaRow);
         mainLayout->addWidget(nameWidget);
         mainLayout->addWidget(queryText, 1);
+        mainLayout->addSpacing(4);
         mainLayout->addLayout(buttonRow);
 
         // Whatever the dialog's fate (Close, Escape, window X), pending edits
