@@ -1225,9 +1225,7 @@ namespace Robomongo
         action->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_L));  
         //action->setStatusTip(QString("Press to show/hide Logs panel."));  //commented for now because this message hides Logs button in status bar :)
         action->setChecked(_logDock->isVisible());
-        // Install action in the menu.
-        _viewMenu->addAction(action);
-        
+
         addDockWidget(Qt::BottomDockWidgetArea, _logDock);
 
         // Command history panel (View > History): searchable list of executed
@@ -1245,6 +1243,9 @@ namespace Robomongo
         _viewMenu->addAction(historyAction);
 
         addDockWidget(Qt::RightDockWidgetArea, _historyDock);
+
+        // Logs panel lives below History & Favorites in the View menu.
+        _viewMenu->addAction(action);
     }
 
     QueryWidget *MainWindow::activeQueryWidget()
