@@ -23,7 +23,7 @@ namespace Robomongo
      *
      *  Top (70%): executed commands - Command | Action (star, Paste, Run).
      *    Right-click: View / favorite management / Remove from History.
-     *  Bottom (30%): favorites - Name | Command | Action (unstar, Paste, Run).
+     *  Bottom (30%): favorites - Name | Action (unstar, Paste, Run).
      *    Right-click: View / Rename / Remove from Favorites.
      *
      *  Shared filter row (search + connection) applies to both panes.

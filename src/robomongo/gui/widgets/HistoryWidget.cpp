@@ -120,18 +120,17 @@ namespace Robomongo
 
         // Bottom pane: favorites (30%)
         _favoritesTree = new QTreeWidget;
-        _favoritesTree->setColumnCount(3);
+        _favoritesTree->setColumnCount(2);
         _favoritesTree->setHeaderLabels(QStringList()
-            << tr("Name") << tr("Command") << tr("Action"));
+            << tr("Name") << tr("Action"));
         _favoritesTree->setRootIsDecorated(false);
         _favoritesTree->setSelectionMode(QAbstractItemView::SingleSelection);
         _favoritesTree->setUniformRowHeights(true);
         _favoritesTree->setAlternatingRowColors(true);
         _favoritesTree->setContextMenuPolicy(Qt::CustomContextMenu);
         _favoritesTree->header()->setStretchLastSection(false);
-        _favoritesTree->header()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
-        _favoritesTree->header()->setSectionResizeMode(1, QHeaderView::Stretch);
-        _favoritesTree->header()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
+        _favoritesTree->header()->setSectionResizeMode(0, QHeaderView::Stretch);
+        _favoritesTree->header()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
 
         auto *favoritesGroup = new QGroupBox(tr("Favorites"));
         favoritesGroup->setStyleSheet(
@@ -330,15 +329,13 @@ namespace Robomongo
 
             auto *item = new QTreeWidgetItem;
             item->setText(0, entry.label);
-            item->setText(1, entry.command.simplified());
             item->setToolTip(0, entry.command + "\n\n" + entry.connectionName
                                 + (entry.databaseName.isEmpty()
                                        ? QString()
                                        : " / " + entry.databaseName));
-            item->setToolTip(1, entry.command);
-            item->setData(1, Qt::UserRole, entry.command);
-            item->setData(1, Qt::UserRole + 1, entry.connectionName);
-            item->setData(1, Qt::UserRole + 2, entry.databaseName);
+            item->setData(0, Qt::UserRole, entry.command);
+            item->setData(0, Qt::UserRole + 1, entry.connectionName);
+            item->setData(0, Qt::UserRole + 2, entry.databaseName);
             _favoritesTree->addTopLevelItem(item);
 
             auto *actions = new QWidget;
@@ -357,7 +354,7 @@ namespace Robomongo
             actionsLayout->addWidget(pasteButton);
             actionsLayout->addWidget(runButton);
 
-            _favoritesTree->setItemWidget(item, 2, actions);
+            _favoritesTree->setItemWidget(item, 1, actions);
 
             FavoriteEntry const captured = entry;
             VERIFY(connect(starButton, &QToolButton::clicked, this,
@@ -405,9 +402,9 @@ namespace Robomongo
 
     void HistoryWidget::onFavoritesDoubleClicked(QTreeWidgetItem *item, int column)
     {
-        if (column == 2)
-            return;
-        applyEntry(item->data(1, Qt::UserRole).toString(), false);
+        if (column == 1)
+            return;   // button clicks are handled by their own slots
+        applyEntry(item->data(0, Qt::UserRole).toString(), false);
     }
 
     void HistoryWidget::onHistoryContextMenu(QPoint const &pos)
@@ -476,9 +473,9 @@ namespace Robomongo
         if (!item)
             return;
 
-        QString const command = item->data(1, Qt::UserRole).toString();
-        QString const connection = item->data(1, Qt::UserRole + 1).toString();
-        QString const database = item->data(1, Qt::UserRole + 2).toString();
+        QString const command = item->data(0, Qt::UserRole).toString();
+        QString const connection = item->data(0, Qt::UserRole + 1).toString();
+        QString const database = item->data(0, Qt::UserRole + 2).toString();
 
         QMenu menu(this);
         QAction *viewAction = menu.addAction(tr("View && Edit"));
@@ -528,7 +525,8 @@ namespace Robomongo
         QTreeWidget *navTree = nullptr;
         QTreeWidget *const panes[2] = { _historyTree, _favoritesTree };
         for (QTreeWidget *pane : panes) {
-            int const col = pane == _historyTree ? 0 : 1;
+            // Both panes keep the entry payload in column 0.
+            int const col = 0;
             for (int i = 0; i < pane->topLevelItemCount(); ++i) {
                 QTreeWidgetItem *item = pane->topLevelItem(i);
                 if (item->data(col, Qt::UserRole).toString() == command
@@ -558,14 +556,11 @@ namespace Robomongo
         metaLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
 
         // Prev/next hop through the pane rows so the entry can be browsed
-        // without closing and reopening the dialog.
-        auto *prevButton = new QToolButton;
-        prevButton->setAutoRaise(true);
-        prevButton->setArrowType(Qt::LeftArrow);
+        // without closing and reopening the dialog. Same QPushButton family as
+        // the other dialog buttons, kept square/compact.
+        auto *prevButton = new QPushButton("<");
         prevButton->setToolTip(tr("Previous entry (the row above in the list)"));
-        auto *nextButton = new QToolButton;
-        nextButton->setAutoRaise(true);
-        nextButton->setArrowType(Qt::RightArrow);
+        auto *nextButton = new QPushButton(">");
         nextButton->setToolTip(tr("Next entry (the row below in the list)"));
 
         auto *metaRow = new QHBoxLayout;
@@ -575,14 +570,23 @@ namespace Robomongo
         metaRow->addWidget(nextButton);
 
         // Favorite name: under the connection/db line, above the query text.
-        auto *nameWidget = new QWidget;
+        // The Save button lives at the right end of this row (View & Edit only,
+        // the row is hidden for plain history entries). Parented to the dialog
+        // up front: refreshHeader() toggles visibility before the layout runs.
+        auto *nameWidget = new QWidget(&dialog);
         auto *nameRow = new QHBoxLayout(nameWidget);
         nameRow->setContentsMargins(0, 0, 0, 0);
         auto *nameCaption = new QLabel(tr("Name:"));
         auto *nameEdit = new QLineEdit;
         nameEdit->setPlaceholderText(tr("Favorite name"));
+        nameEdit->setStyleSheet(
+            "QLineEdit { border: 1px solid #a7a7a7; border-radius: 2px;"
+            " padding: 2px 4px; }");
+        auto *saveButton = new QPushButton(tr("Save"));
+        saveButton->setToolTip(tr("Save changes to this favorite"));
         nameRow->addWidget(nameCaption);
         nameRow->addWidget(nameEdit, 1);
+        nameRow->addWidget(saveButton);
 
         auto *queryText = new QPlainTextEdit;
         queryText->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
@@ -593,6 +597,25 @@ namespace Robomongo
         auto *pasteButton = new QPushButton(tr("Paste"));
         auto *runButton = new QPushButton(tr("Run"));
         auto *closeButton = new QPushButton(tr("Close"));
+
+        // Square, same height as the action buttons below: compact but still
+        // visually part of the same button family.
+        int const navSize = closeButton->sizeHint().height();
+        prevButton->setFixedSize(navSize, navSize);
+        nextButton->setFixedSize(navSize, navSize);
+
+        // Save is enabled only while the favorite has unsaved changes.
+        auto updateSaveState = [&]() {
+            bool const favorited = FavoritesStore::instance().isFavorite(
+                currentConnection, loadedCommand);
+            bool const commandDirty =
+                queryText->toPlainText().trimmed() != loadedCommand;
+            bool const nameDirty =
+                nameEdit->text().trimmed()
+                != FavoritesStore::instance().labelFor(currentConnection,
+                                                       loadedCommand);
+            saveButton->setEnabled(favorited && (commandDirty || nameDirty));
+        };
 
         auto refreshHeader = [&]() {
             bool const favorited = FavoritesStore::instance().isFavorite(
@@ -613,6 +636,7 @@ namespace Robomongo
             queryText->setReadOnly(!favorited);
             prevButton->setEnabled(navIndex > 0);
             nextButton->setEnabled(navIndex >= 0 && navIndex + 1 < navList.size());
+            updateSaveState();
         };
         refreshHeader();
 
@@ -718,9 +742,18 @@ namespace Robomongo
             refreshHeader();
         }));
         VERIFY(connect(nameEdit, &QLineEdit::editingFinished, &dialog, persistName));
-        VERIFY(connect(prevButton, &QToolButton::clicked, &dialog,
+        VERIFY(connect(saveButton, &QPushButton::clicked, &dialog, [&]() {
+            persistName();
+            persistEdits();
+            updateSaveState();
+        }));
+        VERIFY(connect(queryText, &QPlainTextEdit::textChanged,
+                       &dialog, updateSaveState));
+        VERIFY(connect(nameEdit, &QLineEdit::textChanged,
+                       &dialog, updateSaveState));
+        VERIFY(connect(prevButton, &QPushButton::clicked, &dialog,
                        [&]() { gotoEntry(navIndex - 1); }));
-        VERIFY(connect(nextButton, &QToolButton::clicked, &dialog,
+        VERIFY(connect(nextButton, &QPushButton::clicked, &dialog,
                        [&]() { gotoEntry(navIndex + 1); }));
 
         dialog.exec();
