@@ -305,7 +305,7 @@ namespace Robomongo
                                      : collMatch.captured(2);
 
             // Walk the whole .<method>(...) chain after the collection.
-            QString filter, projection, sortSpec;
+            QString filter, projection, sortSpec, pipeline;
             QStringList tail;              // count, limit, skip, ... after the find
             bool known = false;
             int i = collMatch.capturedEnd();
@@ -337,7 +337,11 @@ namespace Robomongo
                     known = true;
                 }
                 else if (method == QLatin1String("aggregate")) {
-                    filter = args.value(0);       // the pipeline, minified
+                    // A pipeline is not a filter - parking it in the filter
+                    // slot made it render as "find:[...]" the moment a second
+                    // part appeared. Its second argument is options, not a
+                    // projection, so nothing is collected from it.
+                    pipeline = args.value(0);
                     known = true;
                 }
                 else if (method == QLatin1String("sort")) {
@@ -350,12 +354,16 @@ namespace Robomongo
                     // - it brings no filter of its own, and overwriting the one
                     // already collected would erase it. Only when nothing
                     // filtered ahead of it does its argument count as a filter.
-                    if (filter.isEmpty() && projection.isEmpty())
+                    if (filter.isEmpty() && projection.isEmpty()
+                        && pipeline.isEmpty())
                         filter = args.value(0);
                     tail << method;
                     known = true;
                 }
-                else if (method == QLatin1String("limit")
+                else if (method == QLatin1String("explain")
+                         || method == QLatin1String("pretty")
+                         || method == QLatin1String("toArray")
+                         || method == QLatin1String("limit")
                          || method == QLatin1String("skip")
                          || method == QLatin1String("batchSize")
                          || method == QLatin1String("distinct")
@@ -380,6 +388,10 @@ namespace Robomongo
                 labels << QStringLiteral("find");
                 values << minifyJsonish(filter);
             }
+            if (!pipeline.isEmpty()) {
+                labels << QStringLiteral("aggregate");
+                values << minifyJsonish(pipeline);
+            }
             if (!projection.isEmpty()) {
                 labels << QStringLiteral("project");
                 values << minifyJsonish(projection);
@@ -397,7 +409,8 @@ namespace Robomongo
             // follows: "activities, {}, count" says the count was unfiltered.
             if (values.size() > 1 && values.first() == QLatin1String("{}")
                 && (labels.contains(QLatin1String("project"))
-                    || labels.contains(QLatin1String("sort")))) {
+                    || labels.contains(QLatin1String("sort"))
+                    || labels.contains(QLatin1String("aggregate")))) {
                 labels.removeAt(0);
                 values.removeAt(0);
             }
