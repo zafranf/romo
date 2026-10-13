@@ -141,6 +141,15 @@ namespace Robomongo
             return false;
 
         if (event->key() == Qt::Key_Up) {
+            // Multi-line query: while still in the draft, Up moves the cursor
+            // up line by line and only recalls history from the first line.
+            // While browsing history the caret sits at the end of the recalled
+            // text, so Up always steps to the next older entry directly.
+            int line = 0, index = 0;
+            _queryText->sciScintilla()->getCursorPosition(&line, &index);
+            if (_historyIndex < 0 && line > 0)
+                return false;
+
             int const next = _historyIndex + 1;      // list is newest-first
             if (next >= list.size())
                 return true;                         // already at the oldest entry
@@ -157,6 +166,13 @@ namespace Robomongo
         // Key_Down
         if (_historyIndex < 0)
             return false;                            // not browsing: default cursor move
+
+        // Mirror of the Up guard: while still inside a multi-line recalled
+        // entry, Down moves the cursor down instead of jumping to the draft.
+        int line = 0, index = 0;
+        _queryText->sciScintilla()->getCursorPosition(&line, &index);
+        if (line < _queryText->sciScintilla()->lines() - 1)
+            return false;
 
         hideAutocompletion();
         --_historyIndex;
