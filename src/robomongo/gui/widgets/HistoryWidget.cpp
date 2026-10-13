@@ -90,7 +90,11 @@ namespace Robomongo
             dialog.setTextEchoMode(QLineEdit::Normal);
             dialog.setLabelText(label);
             dialog.setTextValue(initial);
+            // setMinimumWidth() is silently reset by exec() on this Qt build
+            // (dialog snaps back to ~200px and the title gets clipped);
+            // resize() before exec() sticks.
             dialog.setMinimumWidth(400);
+            dialog.resize(420, dialog.sizeHint().height());
             dialog.setStyleSheet(
                 "QLineEdit { border: 1px solid #a7a7a7; border-radius: 2px;"
                 " padding: 2px 4px; }");
@@ -592,6 +596,11 @@ namespace Robomongo
         metaRow->setContentsMargins(0, 0, 0, 0);
         metaRow->addWidget(metaLabel, 1);
         metaRow->addWidget(prevButton);
+        // Style default cuma nge-gap 2px (dua tombol jadi satu blob), dan
+        // setSpacing() di Qt+macOS ini malah bikin tombol overlap (-6px).
+        // addSpacing() eksplisit satu-satunya yang ngasih jarak beneran, dan
+        // nilainya harus >8 karena Qt "makan" 8px (16 -> gap geometri 8px).
+        metaRow->addSpacing(16);
         metaRow->addWidget(nextButton);
 
         // Favorite name: under the connection/db line, above the query text.
@@ -723,7 +732,9 @@ namespace Robomongo
         buttonRow->addWidget(favoriteButton);
         buttonRow->addStretch();
         buttonRow->addWidget(pasteButton);
+        buttonRow->addSpacing(20);  // see metaRow: Qt eats 8px, 20 -> gap 12
         buttonRow->addWidget(runButton);
+        buttonRow->addSpacing(20);
         buttonRow->addWidget(closeButton);
 
         auto *mainLayout = new QVBoxLayout(&dialog);
