@@ -2,6 +2,7 @@
 
 #include <QComboBox>
 #include <QDialog>
+#include <QEvent>
 #include <QFontDatabase>
 #include <QGroupBox>
 #include <QHBoxLayout>
@@ -22,6 +23,7 @@
 
 #include "robomongo/core/history/FavoritesStore.h"
 #include "robomongo/core/utils/QtUtils.h"
+#include "robomongo/gui/GuiRegistry.h"
 #include "robomongo/gui/MainWindow.h"
 #include "robomongo/gui/widgets/workarea/QueryWidget.h"
 #include "robomongo/utils/common.h"
@@ -30,6 +32,59 @@ namespace Robomongo
 {
     namespace
     {
+        // Path separator between connection and db/collection in labels and
+        // tooltips. Matches the small filled triangle the explorer tree draws
+        // as its branch indicator, so the two panes read the same way.
+        QString const kCaretSeparator =
+            QString::fromUtf8(" \xE2\x96\xB8 ");     // " ▸ "
+
+        /**
+         * @brief Keeps a child widget pinned to a corner of its parent.
+         *
+         * Watches the parent for resize/show and repositions the child. Used
+         * for the prev/next arrows floating in the query textarea's top-right
+         * corner: a plain layout can't overlay, and the parent has no
+         * resizeEvent of its own to hook.
+         */
+        class ResizePin : public QObject
+        {
+        public:
+            ResizePin(QWidget *overlay, QWidget *host, Qt::Alignment align,
+                      QPoint const &margin, QObject *parent = nullptr)
+                : QObject(parent), _overlay(overlay), _align(align),
+                  _margin(margin)
+            {
+                host->installEventFilter(this);
+                repin(host);
+            }
+
+        protected:
+            bool eventFilter(QObject *watched, QEvent *event) override
+            {
+                if (event->type() == QEvent::Resize
+                        || event->type() == QEvent::Show) {
+                    repin(static_cast<QWidget *>(watched));
+                }
+                return QObject::eventFilter(watched, event);
+            }
+
+        private:
+            void repin(QWidget *host)
+            {
+                int x = _margin.x();
+                int y = _margin.y();
+                if (_align & Qt::AlignRight)
+                    x = host->width() - _overlay->width() + _margin.x();
+                if (_align & Qt::AlignBottom)
+                    y = host->height() - _overlay->height() + _margin.y();
+                _overlay->move(x, y);
+            }
+
+            QWidget *_overlay;
+            Qt::Alignment _align;
+            QPoint _margin;
+        };
+
         QToolButton *makeActionButton(QString const &text, QString const &tooltip)
         {
             auto *button = new QToolButton;
@@ -297,7 +352,7 @@ namespace Robomongo
                                 + entry.connectionName
                                 + (entry.databaseName.isEmpty()
                                        ? QString()
-                                       : " > " + entry.databaseName)
+                                       : kCaretSeparator + entry.databaseName)
                                 + (entry.timestamp.isValid()
                                        ? "\n" + entry.timestamp.toString("yyyy-MM-dd HH:mm:ss")
                                        : QString())
@@ -361,7 +416,7 @@ namespace Robomongo
             item->setToolTip(0, entry.command + "\n\n" + entry.connectionName
                                 + (entry.databaseName.isEmpty()
                                        ? QString()
-                                       : " > " + entry.databaseName));
+                                       : kCaretSeparator + entry.databaseName));
             item->setData(0, Qt::UserRole, entry.command);
             item->setData(0, Qt::UserRole + 1, entry.connectionName);
             item->setData(0, Qt::UserRole + 2, entry.databaseName);
@@ -585,23 +640,23 @@ namespace Robomongo
         metaLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
 
         // Prev/next hop through the pane rows so the entry can be browsed
-        // without closing and reopening the dialog. Same QPushButton family as
-        // the other dialog buttons, kept square/compact.
-        auto *prevButton = new QPushButton("<");
+        // without closing and reopening the dialog. Style matches the paging
+        // arrows in the result panel header (PagingWidget): flat QPushButton
+        // with the shared left/right triangle icons, 24x24.
+        auto *prevButton = new QPushButton;
+        prevButton->setIcon(GuiRegistry::instance().leftIcon());
+        prevButton->setFixedSize(24, 24);
+        prevButton->setFlat(true);
         prevButton->setToolTip(tr("Previous entry (the row above in the list)"));
-        auto *nextButton = new QPushButton(">");
+        auto *nextButton = new QPushButton;
+        nextButton->setIcon(GuiRegistry::instance().rightIcon());
+        nextButton->setFixedSize(24, 24);
+        nextButton->setFlat(true);
         nextButton->setToolTip(tr("Next entry (the row below in the list)"));
 
         auto *metaRow = new QHBoxLayout;
         metaRow->setContentsMargins(0, 0, 0, 0);
         metaRow->addWidget(metaLabel, 1);
-        metaRow->addWidget(prevButton);
-        // Style default cuma nge-gap 2px (dua tombol jadi satu blob), dan
-        // setSpacing() di Qt+macOS ini malah bikin tombol overlap (-6px).
-        // addSpacing() eksplisit satu-satunya yang ngasih jarak beneran, dan
-        // nilainya harus >8 karena Qt "makan" 8px (16 -> gap geometri 8px).
-        metaRow->addSpacing(16);
-        metaRow->addWidget(nextButton);
 
         // Favorite name: under the connection/db line, above the query text.
         // The Save button lives at the right end of this row (View & Edit only,
@@ -632,11 +687,23 @@ namespace Robomongo
         auto *runButton = new QPushButton(tr("Run"));
         auto *closeButton = new QPushButton(tr("Close"));
 
-        // Square, same height as the action buttons below: compact but still
-        // visually part of the same button family.
-        int const navSize = closeButton->sizeHint().height();
-        prevButton->setFixedSize(navSize, navSize);
-        nextButton->setFixedSize(navSize, navSize);
+        // Arrows float in the textarea's top-right corner (opaque so text
+        // scrolling underneath doesn't bleed through). Child of queryText, so
+        // it tracks the text edit's geometry; kept top-right via an event
+        // filter (cursorPositionChanged would only fire on caret moves, not
+        // on resize).
+        auto *navOverlay = new QWidget(queryText);
+        navOverlay->setAutoFillBackground(true);
+        auto *navRow = new QHBoxLayout(navOverlay);
+        navRow->setContentsMargins(2, 2, 2, 2);
+        navRow->setSpacing(0);
+        navRow->addWidget(prevButton);
+        navRow->addWidget(nextButton);
+        navOverlay->installEventFilter(new ResizePin(
+            navOverlay, queryText, Qt::AlignTop | Qt::AlignRight,
+            QPoint(-4, 4), navOverlay));
+        navOverlay->move(queryText->width() - navOverlay->width() - 4, 4);
+        navOverlay->show();
 
         // Save is enabled only while the favorite has unsaved changes.
         auto updateSaveState = [&]() {
@@ -656,7 +723,7 @@ namespace Robomongo
                 currentConnection, loadedCommand);
             metaLabel->setText(currentConnection
                                + (currentDatabase.isEmpty()
-                                      ? QString() : " > " + currentDatabase));
+                                      ? QString() : kCaretSeparator + currentDatabase));
             dialog.setWindowTitle(favorited ? tr("Favorite") : tr("History Entry"));
             favoriteButton->setText(favorited ? tr("Remove from Favorites")
                                               : tr("Add to Favorites"));
