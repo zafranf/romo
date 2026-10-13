@@ -13,6 +13,8 @@
 #include <QMenu>
 #include <QPlainTextEdit>
 #include <QPushButton>
+#include <QRegularExpression>
+#include <QRegularExpressionMatch>
 #include <QSet>
 #include <QSplitter>
 #include <QStatusBar>
@@ -157,15 +159,147 @@ namespace Robomongo
             return dialog.textValue();
         }
 
+        // Index of the ')' matching the '(' at text[openPos], or -1 when the
+        // group never closes. String literals are skipped so a ')' inside a
+        // value doesn't end the group early.
+        int matchingParen(QString const &text, int openPos)
+        {
+            int depth = 0;
+            QChar quote;
+            bool escaped = false;
+            for (int i = openPos; i < text.size(); ++i) {
+                QChar const c = text.at(i);
+                if (!quote.isNull()) {
+                    if (escaped)
+                        escaped = false;
+                    else if (c == '\\')
+                        escaped = true;
+                    else if (c == quote)
+                        quote = QChar();
+                    continue;
+                }
+                if (c == '\'' || c == '"') { quote = c; continue; }
+                if (c == '(')
+                    ++depth;
+                else if (c == ')' && --depth == 0)
+                    return i;
+            }
+            return -1;
+        }
+
+        // First top-level argument inside the (...) group [openPos, closePos].
+        // Splits on commas that sit at brace/bracket/paren depth zero.
+        QString firstArgument(QString const &text, int openPos, int closePos)
+        {
+            int depth = 0;
+            QChar quote;
+            bool escaped = false;
+            int const start = openPos + 1;
+            for (int i = openPos; i < closePos; ++i) {
+                QChar const c = text.at(i);
+                if (!quote.isNull()) {
+                    if (escaped)
+                        escaped = false;
+                    else if (c == '\\')
+                        escaped = true;
+                    else if (c == quote)
+                        quote = QChar();
+                    continue;
+                }
+                if (c == '\'' || c == '"') { quote = c; continue; }
+                if (c == '(' || c == '[' || c == '{') { ++depth; continue; }
+                if (c == ')' || c == ']' || c == '}') { --depth; continue; }
+                if (c == ',' && depth == 0)
+                    return text.mid(start, i - start).trimmed();
+            }
+            return text.mid(start, closePos - start).trimmed();
+        }
+
+        // Drops whitespace outside string literals so a pretty-printed filter
+        // collapses onto one line. A space survives only between two word
+        // characters, so "{a: 1}" becomes "{a:1}" but identifiers never merge.
+        QString minifyJsonish(QString const &text)
+        {
+            QString out;
+            out.reserve(text.size());
+            QChar quote;
+            bool escaped = false;
+            for (int i = 0; i < text.size(); ++i) {
+                QChar const c = text.at(i);
+                if (!quote.isNull()) {
+                    out += c;
+                    if (escaped)
+                        escaped = false;
+                    else if (c == '\\')
+                        escaped = true;
+                    else if (c == quote)
+                        quote = QChar();
+                    continue;
+                }
+                if (c == '\'' || c == '"') { quote = c; out += c; continue; }
+                if (c.isSpace()) {
+                    int j = i;
+                    while (j < text.size() && text.at(j).isSpace())
+                        ++j;
+                    QChar const prev = out.isEmpty() ? QChar() : out.at(out.size() - 1);
+                    QChar const next = j < text.size() ? text.at(j) : QChar();
+                    auto const isWord = [](QChar ch) {
+                        return ch.isLetterOrNumber() || ch == '_' || ch == '$';
+                    };
+                    if (!prev.isNull() && !next.isNull() && isWord(prev) && isWord(next))
+                        out += ' ';
+                    i = j - 1;
+                    continue;
+                }
+                out += c;
+            }
+            return out;
+        }
+
         /**
-         * @brief One-line preview that keeps both ends of the command visible.
+         * @brief Compact "coll, {minified-args}" line for the command column.
          *
-         * The command column is a single elided line, so a head-only preview
-         * hides differences near the end (projection, sort, later filter
-         * clauses) and two different queries look identical.
+         * db.getCollection('activities').find({\n    project:1\n}) renders as
+         * "activities, {project:1}". Commands that aren't the usual
+         * db.<coll>.<method>(...) shape fall back to the plain preview. The
+         * tooltip still carries the raw command text.
          */
         QString commandPreview(QString const &command)
         {
+            QString const text = command.trimmed();
+
+            // db.getCollection('X') or db.X
+            static QRegularExpression const collRe(
+                QStringLiteral(R"(^db\.(?:getCollection\s*\(\s*(['"])([^'"]*)\1\s*\)|([A-Za-z_$][\w$]*)))"));
+            QRegularExpressionMatch const collMatch = collRe.match(text);
+            if (collMatch.hasMatch()) {
+                QString const coll = collMatch.captured(2).isEmpty()
+                                         ? collMatch.captured(3)
+                                         : collMatch.captured(2);
+
+                // Walk on to the .method(...) that follows.
+                int i = collMatch.capturedEnd();
+                while (i < text.size() && text.at(i).isSpace())
+                    ++i;
+                if (i < text.size() && text.at(i) == '.') {
+                    ++i;
+                    while (i < text.size() && (text.at(i).isLetterOrNumber()
+                                               || text.at(i) == '_' || text.at(i) == '$'))
+                        ++i;
+                    while (i < text.size() && text.at(i).isSpace())
+                        ++i;
+                    if (i < text.size() && text.at(i) == '(') {
+                        int const close = matchingParen(text, i);
+                        if (close > 0) {
+                            QString const minified =
+                                minifyJsonish(firstArgument(text, i, close));
+                            return minified.isEmpty() ? coll : coll + ", " + minified;
+                        }
+                    }
+                }
+            }
+
+            // Anything else (db.hostInfo(), use('db'), raw JS): old preview.
             QString const preview = command.simplified();
             if (preview.size() <= 65)
                 return preview;
