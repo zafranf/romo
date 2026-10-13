@@ -17,11 +17,11 @@ endif()
 
 set(PROJECT_NAME "Romo")
 set(PROJECT_NAME_TITLE ${PROJECT_NAME})
-set(PROJECT_DOMAIN "www.robomongo.org")
+set(PROJECT_DOMAIN "github.com/zafranf/romo")
 set(PROJECT_COMPANYNAME "3T Software Labs Ltd")
 set(PROJECT_COPYRIGHT "Copyright (C) 2014-2017 ${PROJECT_COMPANYNAME} All Rights Reserved.")
 set(PROJECT_COMPANYNAME_DOMAIN "https://studio3t.com/")
 set(PROJECT_GITHUB_FORK "www.github.com/Studio3T/robomongo")
-set(PROJECT_GITHUB_ISSUES "www.github.com/Studio3T/robomongo/issues")
+set(PROJECT_GITHUB_ISSUES "github.com/zafranf/romo/issues")
 
 string(TOLOWER ${PROJECT_NAME} PROJECT_NAME_LOWERCASE)

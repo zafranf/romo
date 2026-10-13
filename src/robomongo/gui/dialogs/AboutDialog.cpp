@@ -22,6 +22,7 @@ namespace
         "<h3>" PROJECT_NAME_TITLE " v" PROJECT_VERSION 
             " (Build " BUILD_NUMBER + QString(" - ") + MONTH + "/" + YEAR + ")</h3>"
         "Shell-centric MongoDB management tool.<br/>"
+        "A free, open-source fork of Robo 3T (formerly Robomongo).<br/>"
         "<a href=\"https://" PROJECT_GITHUB_ISSUES "\">Submit</a> issues/proposals on GitHub.<br/>"
         "<br/>"
 
@@ -29,6 +30,7 @@ namespace
         "Copyright 2014-" + YEAR +
         " <a href= " PROJECT_COMPANYNAME_DOMAIN " >" PROJECT_COMPANYNAME 
         "</a>. All rights reserved.<br/>"
+        "Romo is distributed under the GNU General Public License v3.<br/>"
         "<br/>"
 
         "The program is provided AS IS with NO WARRANTY OF ANY KIND, "
@@ -90,7 +92,16 @@ namespace Robomongo
         if (file.open(QFile::ReadOnly | QFile::Text))
             textBrowser->setText(file.readAll());
         
+        auto licenseIntro = new QLabel(
+            "<b>Romo</b> is free software licensed under the <b>GNU General Public License v3</b> "
+            "— a fork of <b>Robo 3T</b> (formerly Robomongo) by Studio 3T and Robomongo "
+            "contributors. This build bundles the MongoDB shell (SSPL), Qt (LGPL), OpenSSL "
+            "(Apache 2.0) and libssh2 (MIT). Romo is provided 'as is' with no warranty, and "
+            "it never sends any data anywhere.");
+        licenseIntro->setWordWrap(true);
+
         auto licenseTabLay = new QVBoxLayout;
+        licenseTabLay->addWidget(licenseIntro);
         licenseTabLay->addWidget(textBrowser);
         licenseTab->setLayout(licenseTabLay);
 
