@@ -673,9 +673,19 @@ namespace Robomongo
             " padding: 2px 4px; }");
         auto *saveButton = new QPushButton(tr("Save"));
         saveButton->setToolTip(tr("Save changes to this favorite"));
+        // QPushButton is 32px vs the field's 24px, and its grey fill sits
+        // inset inside that box, so it reads a couple of px low. Wrap it and
+        // reserve space at the bottom only - that shifts the button up without
+        // touching its chrome (a negative margin or a stylesheet makes Qt
+        // redraw the button and wreck its native look).
+        auto *saveWrap = new QWidget;
+        auto *saveWrapLayout = new QVBoxLayout(saveWrap);
+        saveWrapLayout->setContentsMargins(0, 0, 0, 4);
+        saveWrapLayout->setSpacing(0);
+        saveWrapLayout->addWidget(saveButton);
         nameRow->addWidget(nameCaption);
         nameRow->addWidget(nameEdit, 1);
-        nameRow->addWidget(saveButton);
+        nameRow->addWidget(saveWrap);
 
         auto *queryText = new QPlainTextEdit;
         queryText->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
@@ -783,9 +793,7 @@ namespace Robomongo
         auto gotoEntry = [&](int index) {
             if (index < 0 || index >= navList.size() || index == navIndex)
                 return;
-            persistName();          // focus may stay in the name field
-            persistEdits();
-            navIndex = index;
+            navIndex = index;      // pending edits are dropped, not saved
             EntryRef const ref = navList[index];
             currentConnection = ref.connection;
             currentDatabase = ref.database;
@@ -815,12 +823,9 @@ namespace Robomongo
         mainLayout->addSpacing(4);
         mainLayout->addLayout(buttonRow);
 
-        // Whatever the dialog's fate (Close, Escape, window X), pending edits
-        // and a renamed favorite are applied on the way out.
-        VERIFY(connect(&dialog, &QDialog::finished, &dialog, [&](int) {
-            persistEdits();
-            persistName();
-        }));
+        // No autosave anywhere: the Save button below is the only way to
+        // commit. Closing, blurring the name field, or hopping to another
+        // entry all discard pending edits.
         VERIFY(connect(closeButton, &QPushButton::clicked, &dialog, &QDialog::accept));
         VERIFY(connect(pasteButton, &QPushButton::clicked, &dialog, [this, queryText, &dialog]() {
             if (applyEntry(queryText->toPlainText().trimmed(), false))
@@ -849,7 +854,8 @@ namespace Robomongo
             }
             refreshHeader();
         }));
-        VERIFY(connect(nameEdit, &QLineEdit::editingFinished, &dialog, persistName));
+        VERIFY(connect(nameEdit, &QLineEdit::editingFinished, &dialog,
+                       updateSaveState));   // no autosave - just refresh Save
         VERIFY(connect(saveButton, &QPushButton::clicked, &dialog, [&]() {
             persistName();
             persistEdits();
