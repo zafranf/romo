@@ -72,6 +72,22 @@ namespace Robomongo
                 preview = preview.left(60) + "...";
             return preview;
         }
+
+        /**
+         * @brief One-line preview that keeps both ends of the command visible.
+         *
+         * The command column is a single elided line, so a head-only preview
+         * hides differences near the end (projection, sort, later filter
+         * clauses) and two different queries look identical.
+         */
+        QString commandPreview(QString const &command)
+        {
+            QString const preview = command.simplified();
+            if (preview.size() <= 65)
+                return preview;
+            return preview.left(40) + QString::fromUtf8("\xE2\x80\xA6")   // "…"
+                   + preview.right(22);
+        }
     }
 
     HistoryWidget::HistoryWidget(MainWindow *mainWindow, QWidget *parent)
@@ -91,8 +107,9 @@ namespace Robomongo
 
         // Top pane: history (70%)
         _historyTree = new QTreeWidget;
-        _historyTree->setColumnCount(2);
-        _historyTree->setHeaderLabels(QStringList() << tr("Command") << tr("Action"));
+        _historyTree->setColumnCount(3);
+        _historyTree->setHeaderLabels(QStringList()
+            << tr("Command") << tr("Last used") << tr("Action"));
         _historyTree->setRootIsDecorated(false);
         _historyTree->setSelectionMode(QAbstractItemView::SingleSelection);
         _historyTree->setUniformRowHeights(true);
@@ -101,6 +118,7 @@ namespace Robomongo
         _historyTree->header()->setStretchLastSection(false);
         _historyTree->header()->setSectionResizeMode(0, QHeaderView::Stretch);
         _historyTree->header()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
+        _historyTree->header()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
 
         // Bottom pane: favorites (30%)
         _favoritesTree = new QTreeWidget;
@@ -248,16 +266,21 @@ namespace Robomongo
                 continue;
 
             auto *item = new QTreeWidgetItem;
-            item->setText(0, entry.command.simplified());
-            item->setToolTip(0, entry.command + "\n\n"
-                                + entry.connectionName
-                                + (entry.databaseName.isEmpty()
-                                       ? QString()
-                                       : " / " + entry.databaseName)
-                                + (entry.timestamp.isValid()
-                                       ? "\n" + entry.timestamp.toString("yyyy-MM-dd HH:mm:ss")
-                                       : QString())
-                                + (favorited ? "\n★ " + label : QString()));
+            item->setText(0, commandPreview(entry.command));
+            QString const tooltip = entry.command + "\n\n"
+                                    + entry.connectionName
+                                    + (entry.databaseName.isEmpty()
+                                           ? QString()
+                                           : " / " + entry.databaseName)
+                                    + (entry.timestamp.isValid()
+                                           ? "\n" + entry.timestamp.toString("yyyy-MM-dd HH:mm:ss")
+                                           : QString())
+                                    + (favorited ? "\n★ " + label : QString());
+            item->setToolTip(0, tooltip);
+            item->setText(1, entry.timestamp.isValid()
+                                 ? entry.timestamp.toString("yyyy-MM-dd HH:mm:ss")
+                                 : QString());
+            item->setToolTip(1, tooltip);
             item->setData(0, Qt::UserRole, entry.command);
             item->setData(0, Qt::UserRole + 1, entry.connectionName);
             item->setData(0, Qt::UserRole + 2, entry.databaseName);
@@ -279,7 +302,7 @@ namespace Robomongo
             actionsLayout->addWidget(pasteButton);
             actionsLayout->addWidget(runButton);
 
-            _historyTree->setItemWidget(item, 1, actions);
+            _historyTree->setItemWidget(item, 2, actions);
 
             HistoryEntry const captured = entry;
             QToolButton *const capturedStar = starButton;
