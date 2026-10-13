@@ -673,21 +673,9 @@ namespace Robomongo
             " padding: 2px 4px; }");
         auto *saveButton = new QPushButton(tr("Save"));
         saveButton->setToolTip(tr("Save changes to this favorite"));
-        // Same framing as the field so the grey fill runs flush to the widget
-        // edge (native QPushButton insets it ~2px, which left Save shorter and
-        // sitting low). Height is matched in the singleShot() below, once the
-        // layout has run.
-        saveButton->setStyleSheet(
-            "QPushButton { border: 1px solid #a7a7a7; border-radius: 2px;"
-            " padding: 0px 10px; }");
         nameRow->addWidget(nameCaption);
         nameRow->addWidget(nameEdit, 1);
         nameRow->addWidget(saveButton);
-        // The row ends up taller than the field, so without an explicit
-        // alignment the field is top-aligned and Save centred - they never
-        // line up. Pin both to the same edge.
-        nameRow->setAlignment(nameEdit, Qt::AlignVCenter);
-        nameRow->setAlignment(saveButton, Qt::AlignVCenter);
 
         auto *queryText = new QPlainTextEdit;
         queryText->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
@@ -875,14 +863,6 @@ namespace Robomongo
                        [&]() { gotoEntry(navIndex - 1); }));
         VERIFY(connect(nextButton, &QPushButton::clicked, &dialog,
                        [&]() { gotoEntry(navIndex + 1); }));
-
-        // Match the Save button's height to the Name field, but only once the
-        // layout has actually run (sizeHint() at construction is too small and
-        // leaves the fill short + sitting low). singleShot(0) fires inside
-        // exec() right after the first layout pass.
-        QTimer::singleShot(0, &dialog, [saveButton, nameEdit]() {
-            saveButton->setFixedHeight(nameEdit->height());
-        });
 
         dialog.exec();
     }
