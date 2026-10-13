@@ -62,9 +62,6 @@ namespace Robomongo
         void duplicateTab();
         void refreshConnections();
         void aboutRobomongo();
-        void open();
-        void save();
-        void saveAs();
         void changeStyle(QAction *);
         void exit();
 
@@ -144,10 +141,6 @@ namespace Robomongo
         QMenu *_viewMenu;
         QMenu *_toolbarsMenu;
         QAction *_connectAction;
-        // Open/Save tool bar
-        QAction *_openAction;
-        QAction *_saveAction;
-        QAction *_saveAsAction;
         // Execution tool bar
         QAction *_executeAction;
         QAction *_stopAction;

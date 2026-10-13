@@ -128,7 +128,7 @@ namespace Robomongo
         : BaseClass(),
         _logDock(nullptr), _historyDock(nullptr), _workArea(nullptr), _explorer(nullptr), _app(AppRegistry::instance().app()), 
         _connectionsMenu(nullptr), _connectButton(nullptr), _viewMenu(nullptr), _toolbarsMenu(nullptr), 
-        _connectAction(nullptr), _openAction(nullptr), _saveAction(nullptr), _saveAsAction(nullptr),
+        _connectAction(nullptr),
         _executeAction(nullptr), _stopAction(nullptr), _orientationAction(nullptr), _execToolBar(nullptr),
 #if defined(Q_OS_WIN)
         _trayIcon(nullptr),
@@ -154,20 +154,6 @@ namespace Robomongo
             "QMainWindow::separator { background: #E7E5E4; width: 1px; } \n"
             "QMessageBox { messagebox-text-interaction-flags: 5; }"  // Make QMessageBox text selectable
         ).arg(explorerColor));
-        _openAction = new QAction(GuiRegistry::instance().openIcon(), tr("&Open..."), this);
-        _openAction->setToolTip(QString("Load script from the file to the currently opened shell <b>(%1 + O)</b>").arg(controlKey));
-        _openAction->setShortcuts(QKeySequence::Open);
-        VERIFY(connect(_openAction, SIGNAL(triggered()), this, SLOT(open())));
-
-        _saveAction = new QAction(GuiRegistry::instance().saveIcon(), tr("&Save"), this);
-        _saveAction->setShortcuts(QKeySequence::Save);
-        _saveAction->setToolTip(QString("Save script of the currently opened shell to the file <b>(%1 + S)</b>").arg(controlKey));
-        VERIFY(connect(_saveAction, SIGNAL(triggered()), this, SLOT(save())));
-
-        _saveAsAction = new QAction(tr("Save &As..."), this);
-        _saveAsAction->setShortcuts(QKeySequence::SaveAs);
-        VERIFY(connect(_saveAsAction, SIGNAL(triggered()), this, SLOT(saveAs())));
-
         // Exit action
         QAction *exitAction = new QAction("&Exit", this);
         exitAction->setShortcuts(QKeySequence::Quit);
@@ -294,10 +280,6 @@ namespace Robomongo
     /*** File menu ***/
         QMenu *fileMenu = menuBar()->addMenu("File");
         fileMenu->addAction(_connectAction);
-        fileMenu->addSeparator();
-        fileMenu->addAction(_openAction);
-        fileMenu->addAction(_saveAction);
-        fileMenu->addAction(_saveAsAction);
         fileMenu->addSeparator();
         fileMenu->addAction(exitAction);
 
@@ -751,41 +733,6 @@ namespace Robomongo
 #else
         _updateLabel->setFixedHeight((strWidth / widthForUpdateStr + 1) * lineHeight);
 #endif
-    }
-
-    void MainWindow::open()
-    {
-        QueryWidget *wid = _workArea->currentQueryWidget();
-        if (wid) {
-            wid->openFile();
-        }
-        else {  // todo: currently this case not handled properly, since "Open" button is 
-                // disabled when no tabs exist
-            auto connectionsCopy = AppRegistry::instance().settingsManager()->connections();
-            if (connectionsCopy.size() == 1) {
-                ScriptInfo inf = ScriptInfo(QString());
-                if (inf.loadFromFile()) {
-                    // todo: for now do not open new shell
-                    _app->openShell(nullptr, connectionsCopy.at(0), inf);
-                }
-            }
-        }
-    }
-
-    void MainWindow::save()
-    {
-        QueryWidget *wid = _workArea->currentQueryWidget();
-        if (wid) {
-            wid->saveToFile();
-        }
-    }
-
-    void MainWindow::saveAs()
-    {
-        QueryWidget *wid = _workArea->currentQueryWidget();
-        if (wid) {
-            wid->savebToFileAs();
-        }
     }
 
     void MainWindow::updateConnectionsMenu()
@@ -1323,9 +1270,6 @@ namespace Robomongo
         }
 
         _execToolBar->setEnabled(isEnable);
-        _openAction->setEnabled(isEnable);
-        _saveAction->setEnabled(isEnable);
-        _saveAsAction->setEnabled(isEnable);
     }
 
     void MainWindow::createTabs()
