@@ -673,10 +673,10 @@ namespace Robomongo
             " padding: 2px 4px; }");
         auto *saveButton = new QPushButton(tr("Save"));
         saveButton->setToolTip(tr("Save changes to this favorite"));
-        // QPushButton's default 32px box insets its grey fill ~4px, which
-        // dropped the fill 2px below the field's flush border. Match the
-        // field's height so the fill lines up with the border.
-        saveButton->setFixedHeight(nameEdit->sizeHint().height());
+        // Height is matched to the Name field in the singleShot() below, once
+        // the layout has run: sizeHint() here returns a too-small value and
+        // QPushButton's default box insets its grey fill below the field's
+        // flush border.
         nameRow->addWidget(nameCaption);
         nameRow->addWidget(nameEdit, 1);
         nameRow->addWidget(saveButton);
@@ -867,6 +867,14 @@ namespace Robomongo
                        [&]() { gotoEntry(navIndex - 1); }));
         VERIFY(connect(nextButton, &QPushButton::clicked, &dialog,
                        [&]() { gotoEntry(navIndex + 1); }));
+
+        // Match the Save button's height to the Name field, but only once the
+        // layout has actually run (sizeHint() at construction is too small and
+        // leaves the fill short + sitting low). singleShot(0) fires inside
+        // exec() right after the first layout pass.
+        QTimer::singleShot(0, &dialog, [saveButton, nameEdit]() {
+            saveButton->setFixedHeight(nameEdit->height());
+        });
 
         dialog.exec();
     }
