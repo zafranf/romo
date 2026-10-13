@@ -673,6 +673,9 @@ namespace Robomongo
             " padding: 2px 4px; }");
         auto *saveButton = new QPushButton(tr("Save"));
         saveButton->setToolTip(tr("Save changes to this favorite"));
+        // QPushButton insets its grey fill a couple px lower than the field's
+        // flush border, so lift it to line the two up.
+        saveButton->setStyleSheet("QPushButton { margin-top: -2px; }");
         nameRow->addWidget(nameCaption);
         nameRow->addWidget(nameEdit, 1);
         nameRow->addWidget(saveButton);
