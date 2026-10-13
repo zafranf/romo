@@ -74,6 +74,31 @@ namespace Robomongo
         }
 
         /**
+         * @brief Name prompt for add/rename favorite.
+         *
+         * QInputDialog::getText gives no handle for styling, and its default
+         * width clips the "Rename Favorite" title. The stylesheet also gives
+         * the input the same bordered look as the View dialog's Name field.
+         */
+        QString askFavoriteName(QWidget *parent, QString const &title,
+                                QString const &label, QString const &initial,
+                                bool *ok)
+        {
+            QInputDialog dialog(parent);
+            dialog.setWindowTitle(title);
+            dialog.setInputMode(QInputDialog::TextInput);
+            dialog.setTextEchoMode(QLineEdit::Normal);
+            dialog.setLabelText(label);
+            dialog.setTextValue(initial);
+            dialog.setMinimumWidth(400);
+            dialog.setStyleSheet(
+                "QLineEdit { border: 1px solid #a7a7a7; border-radius: 2px;"
+                " padding: 2px 4px; }");
+            *ok = dialog.exec() == QDialog::Accepted;
+            return dialog.textValue();
+        }
+
+        /**
          * @brief One-line preview that keeps both ends of the command visible.
          *
          * The command column is a single elided line, so a head-only preview
@@ -268,7 +293,7 @@ namespace Robomongo
                                 + entry.connectionName
                                 + (entry.databaseName.isEmpty()
                                        ? QString()
-                                       : " / " + entry.databaseName)
+                                       : " > " + entry.databaseName)
                                 + (entry.timestamp.isValid()
                                        ? "\n" + entry.timestamp.toString("yyyy-MM-dd HH:mm:ss")
                                        : QString())
@@ -332,7 +357,7 @@ namespace Robomongo
             item->setToolTip(0, entry.command + "\n\n" + entry.connectionName
                                 + (entry.databaseName.isEmpty()
                                        ? QString()
-                                       : " / " + entry.databaseName));
+                                       : " > " + entry.databaseName));
             item->setData(0, Qt::UserRole, entry.command);
             item->setData(0, Qt::UserRole + 1, entry.connectionName);
             item->setData(0, Qt::UserRole + 2, entry.databaseName);
@@ -380,8 +405,8 @@ namespace Robomongo
         }
 
         bool ok = false;
-        QString const label = QInputDialog::getText(
-            this, tr("Add to Favorites"), tr("Name:"), QLineEdit::Normal,
+        QString const label = askFavoriteName(
+            this, tr("Add to Favorites"), tr("Name:"),
             favoriteNamePreview(entry), &ok);
         if (!ok || label.trimmed().isEmpty()) {
             if (starButton)
@@ -450,8 +475,8 @@ namespace Robomongo
         if (chosen == addOrRenameAction) {
             if (favorited) {
                 bool ok = false;
-                QString const label = QInputDialog::getText(
-                    this, tr("Rename Favorite"), tr("Name:"), QLineEdit::Normal,
+                QString const label = askFavoriteName(
+                    this, tr("Rename Favorite"), tr("Name:"),
                     FavoritesStore::instance().labelFor(connection, command), &ok);
                 if (ok && !label.trimmed().isEmpty())
                     FavoritesStore::instance().rename(connection, command, label);
@@ -497,8 +522,8 @@ namespace Robomongo
         }
         if (chosen == renameAction) {
             bool ok = false;
-            QString const label = QInputDialog::getText(
-                this, tr("Rename Favorite"), tr("Name:"), QLineEdit::Normal,
+            QString const label = askFavoriteName(
+                this, tr("Rename Favorite"), tr("Name:"),
                 FavoritesStore::instance().labelFor(connection, command), &ok);
             if (ok && !label.trimmed().isEmpty())
                 FavoritesStore::instance().rename(connection, command, label);
@@ -622,7 +647,7 @@ namespace Robomongo
                 currentConnection, loadedCommand);
             metaLabel->setText(currentConnection
                                + (currentDatabase.isEmpty()
-                                      ? QString() : " / " + currentDatabase));
+                                      ? QString() : " > " + currentDatabase));
             dialog.setWindowTitle(favorited ? tr("Favorite") : tr("History Entry"));
             favoriteButton->setText(favorited ? tr("Remove from Favorites")
                                               : tr("Add to Favorites"));
@@ -702,9 +727,9 @@ namespace Robomongo
         buttonRow->addWidget(closeButton);
 
         auto *mainLayout = new QVBoxLayout(&dialog);
-        // Tight: the dialog's style defaults leave a wide gap between the
-        // header rows and the query text.
-        mainLayout->setContentsMargins(8, 8, 8, 8);
+        // Tight vertical rhythm between the header rows and the query text;
+        // outer margins stay at the style default (8px made the buttons
+        // collide with the dialog edge).
         mainLayout->setSpacing(4);
         mainLayout->addLayout(metaRow);
         mainLayout->addWidget(nameWidget);
