@@ -9,6 +9,18 @@ Everything you know from Robo 3T is kept: the embedded MongoDB shell,
 IntelliSense, the Explorer tree, in-app scripting, import/export, and direct
 or Replica Set connections.
 
+## Download
+
+Prebuilt **Apple Silicon** build:
+
+- **[romo-0.2.5-macos-arm64.dmg](https://github.com/zafranf/romo/releases/download/v0.2.5/romo-0.2.5-macos-arm64.dmg)** — open it, drag *Romo* into Applications.
+
+All releases: https://github.com/zafranf/romo/releases
+
+> The build is ad-hoc signed (no Apple Developer ID), so macOS warns on first
+> launch. Right-click *Romo* → **Open** → **Open**, or run
+> `xattr -cr /Applications/Romo.app` once.
+
 ## What's new compared to Robo 3T
 
 - **SSH tunnels for Replica Set connections** — Romo opens one local tunnel per
@@ -40,15 +52,18 @@ or Replica Set connections.
 The build needs two repositories checked out side by side:
 
 ```
+git clone https://github.com/zafranf/romo.git         # this repository
+git clone https://github.com/zafranf/romo-shell.git   # MongoDB shell 4.2 fork
+
 <parent>/
-├── roborobo/        # this repository — the application
-└── roborobo-shell/  # MongoDB shell 4.2 fork (patched, built separately)
+├── romo/        # this repository — the application
+└── romo-shell/  # MongoDB shell 4.2 fork (patched, built separately)
 ```
 
 ### 1. Build the MongoDB shell
 
 ```bash
-cd roborobo-shell
+cd romo-shell
 python3 -m venv .venv
 .venv/bin/pip install -r etc/pip/compile-requirements.txt 'scons==4.8.1' 'setuptools==75.8.0'
 .venv/bin/scons mongo --ssl --disable-warnings-as-errors MONGO_VERSION=4.2.6 \
@@ -63,8 +78,8 @@ python3 -m venv .venv
 ### 2. Build the app
 
 ```bash
-cd roborobo
-export ROBOMONGO_CMAKE_PREFIX_PATH="/opt/homebrew/opt/qt@5;$PWD/../roborobo-shell;$PWD/../openssl-1.1.1w"
+cd romo
+export ROBOMONGO_CMAKE_PREFIX_PATH="/opt/homebrew/opt/qt@5;$PWD/../romo-shell;$PWD/../openssl-1.1.1w"
 bin/configure
 bin/build
 bin/install     # produces build/release/install/Romo.app (bundles + signs OpenSSL)
