@@ -554,21 +554,10 @@ namespace Robomongo
         setToolBarIconSize(connectToolBar);
         addToolBar(connectToolBar);
 
-        QToolBar *openSaveToolBar = new QToolBar(tr("Open/Save Toolbar"), this);
-        openSaveToolBar->addAction(_openAction);
-        openSaveToolBar->addAction(_saveAction);
-        openSaveToolBar->setMovable(false);
-        openSaveToolBar->setVisible(true /*toolbarsSettings["open_save"].toBool()*/);
-        _toolbarsMenu->addAction(openSaveToolBar->toggleViewAction());
-        VERIFY(connect(openSaveToolBar->toggleViewAction(), SIGNAL(triggered(bool)), this, SLOT(onOpenSaveToolbarVisibilityChanged(bool))));
-        setToolBarIconSize(openSaveToolBar);
-        addToolBar(openSaveToolBar);
-
         _execToolBar = new QToolBar(tr("Execution Toolbar"), this);
         _execToolBar->setToolButtonStyle(Qt::ToolButtonIconOnly);
         _execToolBar->addAction(_executeAction);
         _execToolBar->addAction(_stopAction);
-        _execToolBar->addAction(_orientationAction);
         _execToolBar->setShortcutEnabled(1, true);
         _execToolBar->setMovable(false);
         _execToolBar->setVisible(true /*toolbarsSettings["exec"].toBool()*/);
@@ -1358,12 +1347,6 @@ namespace Robomongo
     void MainWindow::onConnectToolbarVisibilityChanged(bool isVisible)
     {
         AppRegistry::instance().settingsManager()->setToolbarSettings("connect", isVisible);
-        AppRegistry::instance().settingsManager()->save();
-    }
-    
-    void MainWindow::onOpenSaveToolbarVisibilityChanged(bool isVisible)
-    {
-        AppRegistry::instance().settingsManager()->setToolbarSettings("open_save", isVisible);
         AppRegistry::instance().settingsManager()->save();
     }
     

@@ -102,7 +102,6 @@ namespace Robomongo
         void openWelcomeTab();
 
         void onConnectToolbarVisibilityChanged(bool isVisisble);
-        void onOpenSaveToolbarVisibilityChanged(bool isVisisble);
         void onExecToolbarVisibilityChanged(bool isVisisble);
         void onExplorerVisibilityChanged(bool isVisisble);
         void on_tabChange();
