@@ -538,8 +538,8 @@ namespace Robomongo
 
         _execToolBar = new QToolBar(tr("Execution Toolbar"), this);
         _execToolBar->setToolButtonStyle(Qt::ToolButtonIconOnly);
-        _execToolBar->addAction(_executeAction);
         _execToolBar->addAction(_stopAction);
+        _execToolBar->addAction(_executeAction);
         _execToolBar->setShortcutEnabled(1, true);
         _execToolBar->setMovable(false);
         _execToolBar->setVisible(true /*toolbarsSettings["exec"].toBool()*/);
