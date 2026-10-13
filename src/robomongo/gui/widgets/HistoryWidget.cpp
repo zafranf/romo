@@ -16,6 +16,7 @@
 #include <QRegularExpression>
 #include <QRegularExpressionMatch>
 #include <QSet>
+#include <QStringList>
 #include <QSplitter>
 #include <QStatusBar>
 #include <QTimer>
@@ -187,15 +188,16 @@ namespace Robomongo
             return -1;
         }
 
-        // First top-level argument inside the (...) group [openPos, closePos].
-        // Splits on commas that sit at brace/bracket/paren depth zero.
-        QString firstArgument(QString const &text, int openPos, int closePos)
+        // All top-level arguments inside the (...) group [openPos, closePos],
+        // split on commas that sit at brace/bracket/paren depth zero.
+        QStringList splitArguments(QString const &text, int openPos, int closePos)
         {
             int depth = 0;
             QChar quote;
             bool escaped = false;
-            int const start = openPos + 1;
-            for (int i = openPos; i < closePos; ++i) {
+            QStringList out;
+            int start = openPos + 1;
+            for (int i = openPos + 1; i < closePos; ++i) {
                 QChar const c = text.at(i);
                 if (!quote.isNull()) {
                     if (escaped)
@@ -209,10 +211,13 @@ namespace Robomongo
                 if (c == '\'' || c == '"') { quote = c; continue; }
                 if (c == '(' || c == '[' || c == '{') { ++depth; continue; }
                 if (c == ')' || c == ']' || c == '}') { --depth; continue; }
-                if (c == ',' && depth == 0)
-                    return text.mid(start, i - start).trimmed();
+                if (c == ',' && depth == 0) {
+                    out << text.mid(start, i - start).trimmed();
+                    start = i + 1;
+                }
             }
-            return text.mid(start, closePos - start).trimmed();
+            out << text.mid(start, closePos - start).trimmed();
+            return out;
         }
 
         // Drops whitespace outside string literals so a pretty-printed filter
@@ -256,12 +261,30 @@ namespace Robomongo
             return out;
         }
 
+        // Head/tail view for anything the chain walker can't shape: a lone
+        // helper call, use('db'), raw JS, or a query with a broken string.
+        QString truncatedPreview(QString const &command)
+        {
+            QString const preview = command.simplified();
+            if (preview.size() <= 65)
+                return preview;
+            return preview.left(40) + QString::fromUtf8("\xE2\x80\xA6")   // "…"
+                   + preview.right(22);
+        }
+
         /**
-         * @brief Compact "coll, {minified-args}" line for the command column.
+         * @brief Compact "coll, <parts>" line for the command column.
          *
          * db.getCollection('activities').find({\n    project:1\n}) renders as
-         * "activities, {project:1}". Commands that aren't the usual
-         * db.<coll>.<method>(...) shape fall back to the plain preview. The
+         * "activities, {project:1}". Once a second part shows up - projection,
+         * sort spec, or both - every part is named so the reader can tell them
+         * apart: "activities, find:{project:1}, project:{user:1},
+         * sort:{created_at:-1}". A lone projection or sort is named too.
+         *
+         * The walker reads whatever chain follows the collection, so .sort()
+         * and friends are picked up wherever they sit. Commands outside the
+         * db.<coll>.<method>(...) shape - db.hostInfo(), use('db'), a query
+         * whose string never closes - fall back to the plain preview. The
          * tooltip still carries the raw command text.
          */
         QString commandPreview(QString const &command)
@@ -272,39 +295,97 @@ namespace Robomongo
             static QRegularExpression const collRe(
                 QStringLiteral(R"(^db\.(?:getCollection\s*\(\s*(['"])([^'"]*)\1\s*\)|([A-Za-z_$][\w$]*)))"));
             QRegularExpressionMatch const collMatch = collRe.match(text);
-            if (collMatch.hasMatch()) {
-                QString const coll = collMatch.captured(2).isEmpty()
-                                         ? collMatch.captured(3)
-                                         : collMatch.captured(2);
+            if (!collMatch.hasMatch())
+                return truncatedPreview(command);
 
-                // Walk on to the .method(...) that follows.
-                int i = collMatch.capturedEnd();
+            QString const coll = collMatch.captured(2).isEmpty()
+                                     ? collMatch.captured(3)
+                                     : collMatch.captured(2);
+
+            // Walk the whole .<method>(...) chain after the collection.
+            QString filter, projection, sortSpec;
+            bool known = false;
+            int i = collMatch.capturedEnd();
+            for (;;) {
                 while (i < text.size() && text.at(i).isSpace())
                     ++i;
-                if (i < text.size() && text.at(i) == '.') {
+                if (i >= text.size() || text.at(i) != '.')
+                    break;
+                ++i;
+                int const nameStart = i;
+                while (i < text.size() && (text.at(i).isLetterOrNumber()
+                                           || text.at(i) == '_' || text.at(i) == '$'))
                     ++i;
-                    while (i < text.size() && (text.at(i).isLetterOrNumber()
-                                               || text.at(i) == '_' || text.at(i) == '$'))
-                        ++i;
-                    while (i < text.size() && text.at(i).isSpace())
-                        ++i;
-                    if (i < text.size() && text.at(i) == '(') {
-                        int const close = matchingParen(text, i);
-                        if (close > 0) {
-                            QString const minified =
-                                minifyJsonish(firstArgument(text, i, close));
-                            return minified.isEmpty() ? coll : coll + ", " + minified;
-                        }
-                    }
+                QString const method = text.mid(nameStart, i - nameStart);
+                while (i < text.size() && text.at(i).isSpace())
+                    ++i;
+                if (i >= text.size() || text.at(i) != '(')
+                    break;
+                int const close = matchingParen(text, i);
+                if (close < 0)
+                    break;                       // unterminated: not ours
+                QStringList const args = splitArguments(text, i, close);
+                i = close + 1;
+
+                if (method == QLatin1String("find")
+                    || method == QLatin1String("findOne")) {
+                    filter = args.value(0);
+                    projection = args.value(1);   // absent -> empty QString
+                    known = true;
+                }
+                else if (method == QLatin1String("count")
+                         || method == QLatin1String("countDocuments")
+                         || method == QLatin1String("aggregate")) {
+                    filter = args.value(0);
+                    known = true;
+                }
+                else if (method == QLatin1String("sort")) {
+                    sortSpec = args.value(0);
+                    known = true;
+                }
+                else {
+                    known = false;                // not our shape
+                    break;
                 }
             }
 
-            // Anything else (db.hostInfo(), use('db'), raw JS): old preview.
-            QString const preview = command.simplified();
-            if (preview.size() <= 65)
-                return preview;
-            return preview.left(40) + QString::fromUtf8("\xE2\x80\xA6")   // "…"
-                   + preview.right(22);
+            if (!known)
+                return truncatedPreview(command);
+
+            QStringList labels, values;
+            if (!filter.isEmpty()) {
+                labels << QStringLiteral("find");
+                values << minifyJsonish(filter);
+            }
+            if (!projection.isEmpty()) {
+                labels << QStringLiteral("project");
+                values << minifyJsonish(projection);
+            }
+            if (!sortSpec.isEmpty()) {
+                labels << QStringLiteral("sort");
+                values << minifyJsonish(sortSpec);
+            }
+
+            if (values.isEmpty())
+                return coll;                      // count() with no filter
+
+            // "find({},{b:1})" carries no filter worth naming - drop the {} so
+            // the projection stands alone. Kept when it is all there is, which
+            // is what an unfiltered browse looks like.
+            if (values.size() > 1 && values.first() == QLatin1String("{}")) {
+                labels.removeAt(0);
+                values.removeAt(0);
+            }
+
+            // A lone find filter stays unlabelled; anything else is named so a
+            // projection is never mistaken for the filter itself.
+            bool const named = values.size() > 1
+                               || labels.first() != QLatin1String("find");
+            QStringList rendered;
+            for (int k = 0; k < values.size(); ++k)
+                rendered << (named ? labels.at(k) + ':' + values.at(k)
+                                   : values.at(k));
+            return coll + ", " + rendered.join(QStringLiteral(", "));
         }
     }
 
