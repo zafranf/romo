@@ -145,6 +145,9 @@ set(SOURCES
 )
 
 # Robomongo target
+if(APPLE)
+    list(APPEND SOURCES app/CmdQMonitor.mm)
+endif()
 add_executable(robomongo MACOSX_BUNDLE WIN32 app/main.cpp ${SOURCES})
 
 # Disable WebEngineWidgets for Linux and macOS (brew Qt5 has no WebEngine)
@@ -168,8 +171,9 @@ target_link_libraries(robomongo
 if(APPLE)
   find_library(SECURITY NAMES Security)
   find_library(CORE_FOUNDATION NAMES CoreFoundation)
-  set(SSL_LIBRARIES ${SECURITY} ${CORE_FOUNDATION})
-  
+  find_library(APPKIT NAMES AppKit)   # NSEvent monitor in CmdQMonitor.mm
+  set(SSL_LIBRARIES ${SECURITY} ${CORE_FOUNDATION} ${APPKIT})
+
   target_link_libraries(robomongo
     PRIVATE
         ${SSL_LIBRARIES}

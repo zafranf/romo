@@ -65,12 +65,6 @@ if(SYSTEM_WINDOWS)
         "${OpenSSL_DIR}/libssl-1_1-x64.dll"
         "${OpenSSL_DIR}/libcrypto-1_1-x64.dll"
         DESTINATION ${bin_dir})
-elseif(SYSTEM_MACOSX)
-    install(
-        FILES 
-        "${OpenSSL_DIR}/libssl.1.1.dylib"
-        "${OpenSSL_DIR}/libcrypto.1.1.dylib"
-        DESTINATION ${lib_dir}/lib)
 elseif(SYSTEM_LINUX)
     install(
         FILES 
@@ -101,11 +95,14 @@ SET(QT_LIBS Core Gui Widgets PrintSupport Network Xml)
 if(SYSTEM_WINDOWS)
     SET(QT_LIBS ${QT_LIBS} WebEngineWidgets WebEngineCore Quick
                            QuickWidgets WebChannel Qml Positioning)
-elseif(NOT SYSTEM_LINUX)
-    SET(QT_LIBS ${QT_LIBS} Quick
-                           QuickWidgets WebChannel Qml Positioning)
 endif()
-install_qt_lib(${QT_LIBS})
+if(NOT SYSTEM_MACOSX)
+    # macOS: install/macosx/bundle-fixup.sh derives the exact library set
+    # from the Mach-O references and bundles flat dylibs with rewritten
+    # load commands. Copying Qt .framework trees here would be dead weight
+    # (nothing used to rewrite the load commands, so they were ignored).
+    install_qt_lib(${QT_LIBS})
+endif()
 install_qt_plugins(QGifPlugin QICOPlugin)
 install_icu_libs()
 set(QT_STYLES_DIR ${Qt5Core_DIR}/../../../plugins/styles/)
@@ -138,7 +135,11 @@ elseif(SYSTEM_MACOSX)
     install(FILES "${QT_STYLES_DIR}/libqmacstyle.dylib" DESTINATION ${styles_dir})
 
     # Bundle OpenSSL dylibs (built from source; their ids point at /usr/local/lib),
-    # rewrite install names in the installed binary, then ad-hoc re-sign (arm64).
+    # rewrite install names in the installed binary, then make the whole
+    # bundle self-contained: bundle-fixup.sh copies every remaining non-system
+    # dylib (Homebrew Qt + its transitive deps like pcre2/zstd/glib) into
+    # Contents/Frameworks, rewrites load commands to @executable_path, and
+    # ad-hoc re-signs all Mach-O files (required on arm64 after rewriting).
     install(CODE "
         set(ROMO_BUNDLE \"\${CMAKE_INSTALL_PREFIX}/Romo.app\")
         set(ROMO_FW \"\${ROMO_BUNDLE}/Contents/Frameworks\")
@@ -147,9 +148,7 @@ elseif(SYSTEM_MACOSX)
         execute_process(COMMAND install_name_tool -change /usr/local/lib/libssl.1.1.dylib \"@executable_path/../Frameworks/libssl.1.1.dylib\" \"\${ROMO_BIN}\")
         execute_process(COMMAND install_name_tool -change /usr/local/lib/libcrypto.1.1.dylib \"@executable_path/../Frameworks/libcrypto.1.1.dylib\" \"\${ROMO_BIN}\")
         execute_process(COMMAND install_name_tool -change /usr/local/lib/libcrypto.1.1.dylib \"@executable_path/../Frameworks/libcrypto.1.1.dylib\" \"\${ROMO_FW}/libssl.1.1.dylib\")
-        execute_process(COMMAND codesign -s - --force \"\${ROMO_FW}/libcrypto.1.1.dylib\")
-        execute_process(COMMAND codesign -s - --force \"\${ROMO_FW}/libssl.1.1.dylib\")
-        execute_process(COMMAND codesign -s - --force \"\${ROMO_BIN}\")
+        execute_process(COMMAND \"${CMAKE_SOURCE_DIR}/install/macosx/bundle-fixup.sh\" \"\${ROMO_BUNDLE}\" COMMAND_ERROR_IS_FATAL ANY)
     ")
 elseif(SYSTEM_WINDOWS)
     install_qt_plugins(

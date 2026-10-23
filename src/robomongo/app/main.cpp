@@ -1,6 +1,7 @@
 #include <QApplication>
 #include <QDesktopWidget>
 
+#include <cstdlib>
 #include <locale.h>
 
 // Header "mongo/util/net/sock" is needed for mongo::enableIPv6()
@@ -21,7 +22,7 @@
 #include "robomongo/gui/AppStyle.h"
 #include "robomongo/gui/dialogs/EulaDialog.h"
 #include "robomongo/ssh/ssh.h"
-#include "robomongo/utils/RoboCrypt.h"       
+#include "robomongo/utils/RoboCrypt.h"      
 
 int main(int argc, char *argv[], char** envp)
 {
@@ -60,6 +61,15 @@ int main(int argc, char *argv[], char** envp)
 
     // Initialize Qt application
     QApplication app(argc, argv);
+
+#ifdef Q_OS_MAC
+    // Cmd+Q while a modal dialog is open = close that dialog (Esc-like);
+    // a second Cmd+Q then quits. Installed as an AppKit-level NSEvent
+    // monitor because Qt's disabled menu bar swallows the key equivalent
+    // before it ever reaches Qt (see CmdQMonitor.mm).
+    extern void romoInstallCmdQMonitor();
+    romoInstallCmdQMonitor();
+#endif
 
     // On Unix/Linux Qt is configured to use the system locale settings by default.
     // This can cause a conflict when using POSIX functions, for instance, when
@@ -111,5 +121,22 @@ int main(int argc, char *argv[], char** envp)
 
     int rc = app.exec();
     rbm_ssh_cleanup();
-    return rc;
+
+    // Exit WITHOUT running C++ destructors (static/global ones included).
+    //
+    // Romo embeds the MongoDB shell, and on quit its background threads are
+    // never joined (same as upstream Robo 3T): MongoWorker QThreads are still
+    // tearing down, SpiderMonkey "js" threads still run GC + killCursor network
+    // calls, and SshTunnelWorker threads still sit in their select() loop while
+    // main() returns. The shell's global destructors then run concurrently with
+    // those threads — e.g. mongo::latch_detail::Catalog (the global latch
+    // registry) was destroyed while other threads could still touch it, and its
+    // deque<weak_ptr<Data>> corrupted -> SIGSEGV in __release_weak() on every
+    // Cmd+Q (a sibling crash aborted in LogstreamBuilder::~LogstreamBuilder the
+    // same way). _Exit() skips all of that teardown: the OS reclaims memory,
+    // threads and handles at process death anyway, and everything persistent
+    // (settings, window geometry, history, favorites) was already written out
+    // as it changed — geometry + programExitedNormally are saved in
+    // MainWindow::closeEvent, which runs before app.exec() returns.
+    std::_Exit(rc);
 }

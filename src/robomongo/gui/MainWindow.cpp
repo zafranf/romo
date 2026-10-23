@@ -1,6 +1,7 @@
 #include "robomongo/gui/MainWindow.h"
 
 #include <QApplication>
+#include <QDialog>
 #include <QToolButton>
 #include <QMessageBox>
 #include <QWidgetAction>
@@ -157,6 +158,11 @@ namespace Robomongo
         // Exit action
         QAction *exitAction = new QAction("&Exit", this);
         exitAction->setShortcuts(QKeySequence::Quit);
+        // Application-wide context: with the default WindowShortcut the action
+        // is disabled while a modal dialog (e.g. the startup ConnectionsDialog)
+        // blocks the main window, so Cmd+Q did nothing. ApplicationShortcut
+        // stays active regardless of which window/dialog has focus.
+        exitAction->setShortcutContext(Qt::ApplicationShortcut);
         VERIFY(connect(exitAction, SIGNAL(triggered()), this, SLOT(exit())));
 
         // Connect action
@@ -552,6 +558,14 @@ namespace Robomongo
         _updateLabel->setTextFormat(Qt::TextFormat::RichText);
         _updateLabel->setIndent(_updateLabel->fontMetrics().width("T"));
 
+        // Cmd+Q must work even while a modal dialog is open. Qt disables
+        // the entire native menu bar in that state (QCocoaMenuBar::
+        // shouldDisable), so the Quit menu item ignores its key equivalent
+        // and the keystroke is forwarded to the focused widget instead.
+        // When the menu bar is enabled it consumes Cmd+Q before it ever
+        // reaches Qt, so this filter only fires in the disabled state.
+        qApp->installEventFilter(this);
+
         _closeButton = new QPushButton;
         _closeButton->setIcon(QIcon(":/robomongo/icons/close_hover_16x16.png"));
         _closeButton->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Minimum);
@@ -680,6 +694,20 @@ namespace Robomongo
     void MainWindow::exit()
     {
         _allowExit = true;
+
+        // Reject modal dialogs (e.g. the startup ConnectionsDialog) before
+        // closing the main window. While a modal dialog is open Qt cancels
+        // the close of the windows behind it, so Cmd+Q used to do nothing.
+        // With the dialogs gone, closing the main window triggers
+        // lastWindowClosed -> quit as usual.
+        const auto widgets = QApplication::topLevelWidgets();
+        for (QWidget *widget : widgets) {
+            auto *dialog = qobject_cast<QDialog *>(widget);
+            if (dialog && dialog->isVisible() && dialog->isModal()) {
+                dialog->reject();
+            }
+        }
+
         close();
     }
 
@@ -1153,6 +1181,26 @@ namespace Robomongo
 
     bool MainWindow::eventFilter(QObject *target, QEvent *event)
     {
+#ifdef Q_OS_MAC
+        if (event->type() == QEvent::KeyPress) {
+            auto *keyEvent = static_cast<QKeyEvent *>(event);
+            if (keyEvent->key() == Qt::Key_Q && (keyEvent->modifiers() & Qt::MetaModifier)) {
+                // Fallback: the AppKit monitor (CmdQMonitor.mm) normally
+                // handles this first. Same semantics: close an open modal
+                // dialog instead of quitting; quit only when none is open.
+                if (QWidget *modal = QApplication::activeModalWidget()) {
+                    if (auto *dialog = qobject_cast<QDialog *>(modal))
+                        dialog->reject();
+                    else
+                        modal->close();
+                    return true;
+                }
+                exit();
+                return true;
+            }
+        }
+#endif
+
         auto closeUpdatesBarButton = qobject_cast<QPushButton*>(target);
         if (!closeUpdatesBarButton)
             return false;
