@@ -13,14 +13,18 @@ namespace Robomongo
             const std::string &type, const std::string &response,
             const std::vector<MongoDocumentPtr> &documents,
             const MongoQueryInfo &queryInfo, const std::string &statement,
-            qint64 elapsedms, AggrInfo aggrInfo = AggrInfo()) :
+            qint64 elapsedms, AggrInfo aggrInfo = AggrInfo(),
+            const std::string &collectionName = std::string(),
+            qint64 count = -1) :
             _type(type),
             _response(response),
             _documents(documents),
             _queryInfo(queryInfo),
             _statement(statement),
             _elapsedms(elapsedms),
-            _aggrInfo(aggrInfo)
+            _aggrInfo(aggrInfo),
+            _collectionName(collectionName),
+            _count(count)
         { }
 
         std::string response() const { return _response; }
@@ -37,6 +41,9 @@ namespace Robomongo
 
         qint64 elapsedMs() const { return _elapsedms; }
         AggrInfo const& aggrInfo() const { return _aggrInfo; }
+        std::string collectionName() const { return _collectionName; }
+        // Total matching document count known to the engine; -1 = unknown
+        qint64 count() const { return _count; }
 
     private:
         std::string _type;
@@ -46,6 +53,8 @@ namespace Robomongo
         std::string const _statement;
         qint64 _elapsedms;
         AggrInfo _aggrInfo = AggrInfo();
+        std::string _collectionName;
+        qint64 _count = -1;
     };
 
     /* --------------  MongoShellExecResult Class --------- */

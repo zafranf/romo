@@ -39,7 +39,7 @@ namespace Robomongo
     public Q_SLOTS:        
         void setTime(const QString &time);
         void setCollection(const QString &collection);
-        void setCount(int count);
+        void setCount(qint64 count);
         void maximizeMinimizePart();
 
     private:

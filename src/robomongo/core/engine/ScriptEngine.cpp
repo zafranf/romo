@@ -1,5 +1,7 @@
 #include "robomongo/core/engine/ScriptEngine.h"
 
+#include <regex>
+
 #include <QVector> // unable to put this include below. doesn't compile on GCC 4.7.2 and Qt 4.8
 #include <QDir>
 #include <QStringList>
@@ -341,6 +343,7 @@ namespace Robomongo
             "__robomongoDbName = '[invalid database]'; \n"
             "__robomongoServerAddress = '[invalid connection]'; \n"
             "__robomongoCollectionName = '[invalid collection]'; \n"
+            "__robomongoCount = -1; \n"
             "if (typeof __robomongoLastRes == 'object' && __robomongoLastRes != null \n"
             "    && __robomongoLastRes instanceof DBQuery) { \n"
             "    __robomongoQuery = true; \n"
@@ -354,6 +357,15 @@ namespace Robomongo
             "    __robomongoBatchSize = __robomongoLastRes._batchSize; \n"
             "    __robomongoOptions = __robomongoLastRes._options; \n"
             "    __robomongoSpecial = __robomongoLastRes._special; \n"
+            "    try { \n"
+            "        var __robomongoCountQuery = __robomongoLastRes._query; \n"
+            "        if (__robomongoCountQuery && typeof __robomongoCountQuery === 'object' \n"
+            "            && '$query' in __robomongoCountQuery) { \n"
+            "            __robomongoCountQuery = __robomongoCountQuery.$query; \n"
+            "        } \n"
+            "        __robomongoCount = Number(__robomongoLastRes._collection.count(__robomongoCountQuery)); \n"
+            "        if (isNaN(__robomongoCount)) { __robomongoCount = -1; } \n"
+            "    } catch (e) { } \n"
             "} \n"
             "else if (typeof __robomongoLastRes == 'object' && __robomongoLastRes != null \n"
             "         && __robomongoLastRes instanceof DBCommandCursor \n"
@@ -369,6 +381,8 @@ namespace Robomongo
         _scope->exec(script, "(getresultinfo)", false, false, false);
         bool const isQuery = _scope->getBoolean("__robomongoQuery");
         bool const isAggregate = _scope->getBoolean("__robomongoIsAggregate");
+
+        qint64 const totalDocCount = static_cast<qint64>(_scope->getNumberLongLong("__robomongoCount"));
 
         if (isQuery) {
             std::string serverAddress = getString("__robomongoServerAddress");
@@ -387,7 +401,8 @@ namespace Robomongo
 
             MongoQueryInfo const info{ CollectionInfo(serverAddress, dbName, collectionName),
                                        query, fields, limit, skip, batchSize, options, special };
-            return MongoShellResult(type, output, objects, info, statement, elapsedms);
+            return MongoShellResult(type, output, objects, info, statement, elapsedms,
+                                    AggrInfo(), collectionName, totalDocCount);
         }
         else if (isAggregate) {
             std::string const serverAddress = getString("__robomongoServerAddress");
@@ -404,9 +419,43 @@ namespace Robomongo
             int const resultIndex = aggrInfo.isValid ? aggrInfo.resultIndex : -1;
 
             AggrInfo const newAggrInfo { collectionName, skip, batchSize, origPipeline, options, resultIndex };
-            return MongoShellResult(type, output, objects, MongoQueryInfo(), statement, elapsedms, newAggrInfo);
+            return MongoShellResult(type, output, objects, MongoQueryInfo(), statement, elapsedms,
+                                    newAggrInfo, collectionName);
         }
-        return MongoShellResult(type, output, objects, MongoQueryInfo(), statement, elapsedms);
+        // Non-cursor statement (e.g. db.coll.count(), db.coll.stats()): the result
+        // carries no DBQuery metadata, so recover the collection name from the
+        // statement text. For *.count(...)* statements whose output is a plain
+        // integer, that integer is the document count to show in the header.
+        std::string collectionName;
+        {
+            static const std::regex reGetCollection(
+                R"(getCollection\s*\(\s*['"]([^'"]+)['"])");
+            static const std::regex reDotCollection(R"(db\.([A-Za-z0-9_]+)\s*\.)");
+            std::smatch match;
+            if (std::regex_search(statement, match, reGetCollection))
+                collectionName = match[1].str();
+            else if (std::regex_search(statement, match, reDotCollection))
+                collectionName = match[1].str();
+        }
+
+        qint64 statementCount = -1;
+        {
+            static const std::regex reCountCall(R"(\.count\s*\()");
+            static const std::regex reInteger(R"(^\s*(-?\d+)\s*$)");
+            std::smatch match;
+            if (!collectionName.empty()
+                && std::regex_search(statement, reCountCall)
+                && std::regex_match(output, match, reInteger)) {
+                try {
+                    statementCount = std::stoll(match[1].str());
+                } catch (...) {
+                    statementCount = -1;
+                }
+            }
+        }
+
+        return MongoShellResult(type, output, objects, MongoQueryInfo(), statement, elapsedms,
+                                AggrInfo(), collectionName, statementCount);
     }
 
     MongoShellExecResult ScriptEngine::prepareExecResult(const std::vector<MongoShellResult> &results, 

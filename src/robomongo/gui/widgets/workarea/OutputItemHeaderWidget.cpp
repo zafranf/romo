@@ -257,10 +257,10 @@ namespace Robomongo
         _collectionIndicator->setText(collection);
     }
 
-    void OutputItemHeaderWidget::setCount(int count)
+    void OutputItemHeaderWidget::setCount(qint64 count)
     {
         _countIndicator->setVisible(true);
-        _countIndicator->setText(QString("%1 docs.").arg(count));
+        _countIndicator->setText(QString("%L1 docs.").arg(count));
     }
 
     void OutputItemHeaderWidget::maximizeMinimizePart()

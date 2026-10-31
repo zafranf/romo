@@ -26,8 +26,9 @@ namespace Robomongo
 {
     OutputItemContentWidget::OutputItemContentWidget(ViewMode viewMode, MongoShell *shell, 
                                                      const QString &text, double secs, bool multipleResults, 
-                                                     bool tabbedResults, bool firstItem, bool lastItem, 
-                                                     AggrInfo aggrInfo, QWidget *parent) :
+                                                     bool tabbedResults, bool firstItem, bool lastItem,
+                                                     AggrInfo aggrInfo, const QString &collectionName,
+                                                     qint64 totalCount, QWidget *parent) :
         BaseClass(parent),
         _textView(NULL),
         _bsonTreeview(NULL),
@@ -49,7 +50,9 @@ namespace Robomongo
         _initialLimit(0),
         _mod(NULL),
         _viewMode(viewMode),
-        _aggrInfo(aggrInfo)
+        _aggrInfo(aggrInfo),
+        _collectionName(collectionName),
+        _totalCount(totalCount)
     {
         setup(secs, multipleResults, tabbedResults, firstItem, lastItem);
     }
@@ -60,7 +63,7 @@ namespace Robomongo
                                                      const MongoQueryInfo &queryInfo, double secs, 
                                                      bool multipleResults, bool tabbedResults,
                                                      bool firstItem, bool lastItem, AggrInfo aggrInfo,
-                                                     QWidget *parent) :
+                                                     qint64 totalCount, QWidget *parent) :
         BaseClass(parent),
         _textView(NULL),
         _bsonTreeview(NULL),
@@ -84,13 +87,14 @@ namespace Robomongo
         _outputWidget(dynamic_cast<OutputWidget*>(parentWidget())),
         _mod(NULL),
         _viewMode(viewMode),
-        _aggrInfo(aggrInfo)
+        _aggrInfo(aggrInfo),
+        _totalCount(totalCount)
     {
         setup(secs, multipleResults, tabbedResults, firstItem, lastItem);
     }
 
     void OutputItemContentWidget::setup(double secs, bool multipleResults, bool tabbedResults,
-                                        bool firstItem, bool lastItem)
+                                       bool firstItem, bool lastItem)
     {      
         setContentsMargins(0, 0, 0, 0);
         _header = new OutputItemHeaderWidget(this, multipleResults, tabbedResults, firstItem, lastItem);
@@ -109,9 +113,19 @@ namespace Robomongo
             _header->paging()->setBatchSize(_aggrInfo.batchSize);
             _header->paging()->setSkip(_aggrInfo.skip);
         }
+        else if (!_collectionName.isEmpty()) {
+            // Non-cursor result (e.g. db.coll.count()) — collection name recovered
+            // from the statement text by ScriptEngine.
+            _header->setCollection(_collectionName);
+        }
 
         _header->setTime(QString("%1 sec.").arg(secs, 0, 'g', 3));
-        _header->setCount(static_cast<int>(_documents.size()));
+
+        // Prefer the engine-computed total matching count; -1 means unknown,
+        // fall back to the number of documents we actually hold.
+        qint64 const totalCount = _totalCount >= 0 ? _totalCount
+                                                   : static_cast<qint64>(_documents.size());
+        _header->setCount(totalCount);
 
         QVBoxLayout *layout = new QVBoxLayout();
         layout->setContentsMargins(0, 0, 0, 0);
@@ -232,7 +246,6 @@ namespace Robomongo
 
         _header->paging()->setSkip(skip);
         _header->paging()->setBatchSize(batchSize);
-        _header->setCount(static_cast<int>(documents.size()));
 
         _text.clear();
         _isFirstPartRendered = false;
