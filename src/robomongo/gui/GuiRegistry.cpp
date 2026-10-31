@@ -299,6 +299,12 @@ namespace Robomongo
         return timeIc;
     }
 
+    const QIcon &GuiRegistry::countIcon() const
+    {
+        static const QIcon countIc = QIcon(":/robomongo/icons/count_16x16.png");
+        return countIc;
+    }
+
     const QIcon &GuiRegistry::keyIcon() const
     {
         static const QIcon keyIc = QIcon(":/robomongo/icons/key_16x16.png");

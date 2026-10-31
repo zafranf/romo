@@ -111,6 +111,7 @@ namespace Robomongo
         }
 
         _header->setTime(QString("%1 sec.").arg(secs, 0, 'g', 3));
+        _header->setCount(static_cast<int>(_documents.size()));
 
         QVBoxLayout *layout = new QVBoxLayout();
         layout->setContentsMargins(0, 0, 0, 0);
@@ -231,6 +232,7 @@ namespace Robomongo
 
         _header->paging()->setSkip(skip);
         _header->paging()->setBatchSize(batchSize);
+        _header->setCount(static_cast<int>(documents.size()));
 
         _text.clear();
         _isFirstPartRendered = false;

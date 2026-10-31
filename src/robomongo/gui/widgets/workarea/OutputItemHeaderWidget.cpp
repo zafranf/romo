@@ -105,10 +105,12 @@ namespace Robomongo
         VERIFY(connect(_customButton, SIGNAL(clicked()), outputItemContentWidget, SLOT(showCustom())));
 
         _collectionIndicator = new Indicator(GuiRegistry::instance().collectionIcon());
+        _countIndicator = new Indicator(GuiRegistry::instance().countIcon(), QString("0 docs."));
         _timeIndicator = new Indicator(GuiRegistry::instance().timeIcon());
         _paging = new PagingWidget();
 
         _collectionIndicator->hide();
+        _countIndicator->hide();
         _timeIndicator->hide();
         _paging->hide();
 
@@ -120,6 +122,7 @@ namespace Robomongo
 #endif
         layout->setSpacing(0);
         layout->addWidget(_collectionIndicator);
+        layout->addWidget(_countIndicator);
         layout->addWidget(_timeIndicator);
         QSpacerItem *hSpacer = new QSpacerItem(2000, 24, QSizePolicy::Preferred, QSizePolicy::Minimum);
         layout->addSpacerItem(hSpacer);
@@ -252,6 +255,12 @@ namespace Robomongo
     {
         _collectionIndicator->setVisible(!collection.isEmpty());
         _collectionIndicator->setText(collection);
+    }
+
+    void OutputItemHeaderWidget::setCount(int count)
+    {
+        _countIndicator->setVisible(true);
+        _countIndicator->setText(QString("%1 docs.").arg(count));
     }
 
     void OutputItemHeaderWidget::maximizeMinimizePart()
