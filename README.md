@@ -13,7 +13,7 @@ or Replica Set connections.
 
 Prebuilt **Apple Silicon** build:
 
-- **[romo-0.2.5-macos-arm64.dmg](https://github.com/zafranf/romo/releases/download/v0.2.5/romo-0.2.5-macos-arm64.dmg)** — open it, drag *Romo* into Applications.
+- **[romo-0.2.6-macos-arm64.dmg](https://github.com/zafranf/romo/releases/download/v0.2.6/romo-0.2.6-macos-arm64.dmg)** — open it, drag *Romo* into Applications.
 
 All releases: https://github.com/zafranf/romo/releases
 
