@@ -959,15 +959,17 @@ namespace Robomongo
         R_EVENT
 
     public:
-        ExportProgressEvent(QObject *sender, qint64 written, qint64 total, bool finished) :
-            Event(sender), written(written), total(total), finished(finished) {}
+        ExportProgressEvent(QObject *sender, long long written, long long total,
+                            bool finished, const std::string &path) :
+            Event(sender), written(written), total(total), finished(finished), path(path) {}
 
         ExportProgressEvent(QObject *sender, const EventError &error) :
             Event(sender, error), written(0), total(0), finished(true) {}
 
-        qint64 written;
-        qint64 total;
+        long long written;
+        long long total;
         bool finished;
+        std::string path;
     };
 
     class AutocompleteRequest : public Event

@@ -12,7 +12,7 @@ class QPushButton;
 class QTreeWidgetItem;
 class QNetworkReply;
 class QNetworkAccessManager;
-class QMovie;
+class QProgressBar;
 QT_END_NAMESPACE
 
 namespace Robomongo
@@ -144,7 +144,8 @@ namespace Robomongo
 
         // JSON export progress indicator (right side of the status bar)
         QWidget *_exportIndicator;
-        QLabel *_exportPercentLabel;
+        QLabel *_exportFileLabel;
+        QProgressBar *_exportProgressBar;
         QMenu *_viewMenu;
         QMenu *_toolbarsMenu;
         QAction *_connectAction;

@@ -617,7 +617,8 @@ namespace Robomongo
             // publish (not reply): the initiator widget may be closed while the
             // export keeps running; MainWindow owns the progress display.
             AppRegistry::instance().bus()->publish(
-                new ExportProgressEvent(this, written, event->expectedTotal(), finished));
+                new ExportProgressEvent(this, written, event->expectedTotal(),
+                                        finished, event->path()));
         };
 
         try {
