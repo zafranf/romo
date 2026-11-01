@@ -35,7 +35,7 @@ namespace Robomongo
                                 const std::vector<MongoDocumentPtr> &documents, 
                                 const MongoQueryInfo &queryInfo, double secs, bool multipleResults,
                                 bool tabbedResults, bool firstItem, bool lastItem, AggrInfo aggrInfo,
-                                qint64 totalCount, QWidget *parent);
+                                const QString &collectionName, qint64 totalCount, QWidget *parent);
         int _initialSkip;
         int _initialLimit;
         void updateWithInfo(const MongoQueryInfo &inf, const std::vector<MongoDocumentPtr> &documents);

@@ -63,6 +63,7 @@ namespace Robomongo
                                                      const MongoQueryInfo &queryInfo, double secs, 
                                                      bool multipleResults, bool tabbedResults,
                                                      bool firstItem, bool lastItem, AggrInfo aggrInfo,
+                                                     const QString &collectionName,
                                                      qint64 totalCount, QWidget *parent) :
         BaseClass(parent),
         _textView(NULL),
@@ -88,6 +89,7 @@ namespace Robomongo
         _mod(NULL),
         _viewMode(viewMode),
         _aggrInfo(aggrInfo),
+        _collectionName(collectionName),
         _totalCount(totalCount)
     {
         setup(secs, multipleResults, tabbedResults, firstItem, lastItem);

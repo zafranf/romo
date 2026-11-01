@@ -74,7 +74,9 @@ namespace Robomongo
                 item = new OutputItemContentWidget(viewMode, shell, QtUtils::toQString(shellResult.type()),
                                                    shellResult.documents(), shellResult.queryInfo(), secs, 
                                                    multipleResults, _tabbedResults, firstItem, lastItem,
-                                                   shellResult.aggrInfo(), shellResult.count(), this);
+                                                   shellResult.aggrInfo(),
+                                                   QtUtils::toQString(shellResult.collectionName()),
+                                                   shellResult.count(), this);
             } else {
                 item = new OutputItemContentWidget(viewMode, shell, QtUtils::toQString(shellResult.response()), 
                                                    secs, multipleResults, _tabbedResults, firstItem, lastItem,

@@ -375,6 +375,7 @@ namespace Robomongo
             "    __robomongoDbName = __robomongoLastRes._db.getName();\n "
             "    __robomongoServerAddress = __robomongoLastRes._db._mongo.host; \n"
             "    __robomongoCollectionName = __robomongoLastRes._collName; \n"
+            "    __robomongoAggDb = __robomongoLastRes._db; \n"
             "} \n"
             ;
 
@@ -419,8 +420,62 @@ namespace Robomongo
             int const resultIndex = aggrInfo.isValid ? aggrInfo.resultIndex : -1;
 
             AggrInfo const newAggrInfo { collectionName, skip, batchSize, origPipeline, options, resultIndex };
+            // Compute the TOTAL matching count for the original (unpaged) pipeline
+            // by re-running it with a trailing $count stage. $out/$merge pipelines
+            // are skipped (side effects / cost). -1 = unknown -> docs.size() fallback.
+            qint64 aggregateCount = -1;
+            {
+                mongo::BSONObj const pipeForCount = aggrInfo.isValid ? aggrInfo.pipeline : pipeline;
+                try {
+                    std::string stages;
+                    for (int i = 0; ; ++i) {
+                        mongo::BSONElement const element = pipeForCount.getField(std::to_string(i));
+                        if (element.eoo())
+                            break;
+                        if (!stages.empty())
+                            stages += ", ";
+                        stages += mongo::tojson(element.Obj());
+                    }
+
+                    std::string const escapedCollection = [&collectionName]() {
+                        std::string escaped;
+                        for (char const c : collectionName) {
+                            if (c == '\\' || c == '\'')
+                                escaped += '\\';
+                            escaped += c;
+                        }
+                        return escaped;
+                    }();
+
+                    std::string const countScript =
+                        "__robomongoCount = -1; \n"
+                        "try { \n"
+                        "    var __rmPipe = [" + stages + "]; \n"
+                        "    var __rmSkipCount = false; \n"
+                        "    for (var __rmI = 0; __rmI < __rmPipe.length; ++__rmI) { \n"
+                        "        if ('$out' in __rmPipe[__rmI] || '$merge' in __rmPipe[__rmI]) { \n"
+                        "            __rmSkipCount = true; \n"
+                        "            break; \n"
+                        "        } \n"
+                        "    } \n"
+                        "    if (!__rmSkipCount) { \n"
+                        "        var __rmCountCur = __robomongoAggDb.getCollection('" + escapedCollection + "')" \
+                        ".aggregate(__rmPipe.concat([{$count: '__rmTotalN'}])); \n"
+                        "        __robomongoCount = __rmCountCur.hasNext()" \
+                        "            ? Number(__rmCountCur.next().__rmTotalN) : 0; \n"
+                        "    } \n"
+                        "    if (isNaN(__robomongoCount)) { __robomongoCount = -1; } \n"
+                        "} catch (e) { __robomongoCount = -1; } \n";
+
+                    _scope->exec(countScript, "(getaggregatecount)", false, false, false);
+                    aggregateCount = static_cast<qint64>(_scope->getNumberLongLong("__robomongoCount"));
+                } catch (...) {
+                    aggregateCount = -1;
+                }
+            }
+
             return MongoShellResult(type, output, objects, MongoQueryInfo(), statement, elapsedms,
-                                    newAggrInfo, collectionName);
+                                    newAggrInfo, collectionName, aggregateCount);
         }
         // Non-cursor statement (e.g. db.coll.count(), db.coll.stats()): the result
         // carries no DBQuery metadata, so recover the collection name from the
@@ -440,7 +495,7 @@ namespace Robomongo
 
         qint64 statementCount = -1;
         {
-            static const std::regex reCountCall(R"(\.count\s*\()");
+            static const std::regex reCountCall(R"(\.(count|countDocuments|estimatedDocumentCount)\s*\()");
             static const std::regex reInteger(R"(^\s*(-?\d+)\s*$)");
             std::smatch match;
             if (!collectionName.empty()
