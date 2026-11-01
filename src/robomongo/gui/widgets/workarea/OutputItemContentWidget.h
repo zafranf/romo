@@ -69,7 +69,8 @@ namespace Robomongo
         void jsonPartReady(const QString &json);
         void refresh(int skip, int batchSize);
         void paging_rightClicked(int skip, int batchSize);
-        void paging_leftClicked(int skip, int limit);      
+        void paging_leftClicked(int skip, int limit);
+        void exportJson();
 
     private:
         void setup(double secs, bool multipleResults, bool tabbedResults, bool firstItem, bool lastItem);

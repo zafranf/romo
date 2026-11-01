@@ -34,7 +34,7 @@ namespace Robomongo
         _batchSizeEdit->setToolTip("Batch Size (number of documents shown at once)");
 
         QFontMetrics metrics = _skipEdit->fontMetrics();
-        int width = metrics.boundingRect("00000000").width();
+        int width = metrics.boundingRect("00000").width();
         QRegExp rx("\\d+");
         _skipEdit->setValidator(new QRegExpValidator(rx, this));
         _batchSizeEdit->setValidator(new QRegExpValidator(rx, this));
@@ -45,6 +45,10 @@ namespace Robomongo
         QPushButton *rightButton = createButtonWithIcon(GuiRegistry::instance().rightIcon());
         VERIFY(connect(leftButton, SIGNAL(clicked()), this, SLOT(leftButton_clicked())));
         VERIFY(connect(rightButton, SIGNAL(clicked()), this, SLOT(rightButton_clicked())));
+
+        QPushButton *exportButton = createButtonWithIcon(GuiRegistry::instance().saveIcon());
+        exportButton->setToolTip("Export result as JSON");
+        VERIFY(connect(exportButton, SIGNAL(clicked()), this, SLOT(exportButton_clicked())));
 
         VERIFY(connect(_batchSizeEdit, SIGNAL(returnPressed()), this, SLOT(refresh())));
         VERIFY(connect(_skipEdit, SIGNAL(returnPressed()), this, SLOT(refresh())));
@@ -60,6 +64,8 @@ namespace Robomongo
         layout->addWidget(_batchSizeEdit);
         layout->addSpacing(0);
         layout->addWidget(rightButton);
+        layout->addSpacing(4);
+        layout->addWidget(exportButton);
         setLayout(layout);
     }
 
@@ -97,5 +103,10 @@ namespace Robomongo
         int limit = _batchSizeEdit->text().toInt();
         int skip = _skipEdit->text().toInt();
         emit rightClicked(skip, limit);
+    }
+
+    void PagingWidget::exportButton_clicked()
+    {
+        emit exportRequested();
     }
 }

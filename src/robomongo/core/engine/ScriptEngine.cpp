@@ -419,7 +419,8 @@ namespace Robomongo
             int const batchSize = aggrInfo.isValid ? aggrInfo.batchSize : 50;
             int const resultIndex = aggrInfo.isValid ? aggrInfo.resultIndex : -1;
 
-            AggrInfo const newAggrInfo { collectionName, skip, batchSize, origPipeline, options, resultIndex };
+            AggrInfo newAggrInfo { collectionName, skip, batchSize, origPipeline, options, resultIndex };
+            newAggrInfo.dbName = dbName;
             // Compute the TOTAL matching count for the original (unpaged) pipeline
             // by re-running it with a trailing $count stage. $out/$merge pipelines
             // are skipped (side effects / cost). -1 = unknown -> docs.size() fallback.

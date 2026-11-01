@@ -1,13 +1,21 @@
 #include "robomongo/gui/widgets/workarea/OutputItemContentWidget.h"
 
 #include <QVBoxLayout>
+#include <QFileDialog>
+#include <QDateTime>
+#include <QDir>
+#include <QFile>
+#include <QMessageBox>
 #include <Qsci/qscilexerjavascript.h>
 
 #include "robomongo/core/AppRegistry.h"
 #include "robomongo/core/settings/SettingsManager.h"
 #include "robomongo/core/utils/QtUtils.h"
 #include "robomongo/core/domain/MongoShell.h"
+#include "robomongo/core/domain/MongoServer.h"
 #include "robomongo/core/domain/MongoAggregateInfo.h"
+
+#include "mongo/bson/json.h"
 
 #include "robomongo/gui/widgets/workarea/OutputWidget.h"
 #include "robomongo/gui/widgets/workarea/OutputItemHeaderWidget.h"
@@ -143,6 +151,7 @@ namespace Robomongo
         VERIFY(connect(_header->paging(), SIGNAL(rightClicked(int, int)), this, SLOT(paging_rightClicked(int, int))));
         VERIFY(connect(_header, SIGNAL(maximizedPart()), this, SIGNAL(maximizedPart())));
         VERIFY(connect(_header, SIGNAL(restoredSize()), this, SIGNAL(restoredSize())));
+        VERIFY(connect(_header->paging(), SIGNAL(exportRequested()), this, SLOT(exportJson())));
 
         refreshOutputItem();
     }
@@ -155,6 +164,75 @@ namespace Robomongo
             s = 0;
 
         refresh(s, limit);
+    }
+
+    void OutputItemContentWidget::exportJson()
+    {
+        if (_documents.empty()) {
+            QMessageBox::information(this, tr("Export JSON"),
+                                     tr("There are no documents to export."));
+            return;
+        }
+
+        // <connection>-<db>-<collection>-<yyyyMMddhhmmss>.json
+        std::string const connectionName = _shell && _shell->server()
+                && _shell->server()->connectionRecord()
+            ? _shell->server()->connectionRecord()->connectionName()
+            : std::string("connection");
+
+        std::string dbName;
+        std::string collectionName;
+        if (_queryInfo._info.isValid()) {
+            dbName = _queryInfo._info._ns.databaseName();
+            collectionName = _queryInfo._info._ns.collectionName();
+        }
+        else if (_aggrInfo.isValid) {
+            dbName = _aggrInfo.dbName;
+            collectionName = _aggrInfo.collectionName;
+        }
+
+        auto const sanitize = [](std::string const &value) {
+            std::string result;
+            result.reserve(value.size());
+            for (char const c : value) {
+                bool const bad = (c == '/' || c == '\\' || c == ':' || c == '*' ||
+                                  c == '?' || c == '"' || c == '<' || c == '>' ||
+                                  c == '|' || c == ' ');
+                result += bad ? '_' : c;
+            }
+            return result.empty() ? std::string("unnamed") : result;
+        };
+
+        QString const defaultName = QString("%1-%2-%3-%4.json")
+                .arg(QString::fromStdString(sanitize(connectionName)))
+                .arg(QString::fromStdString(sanitize(dbName)))
+                .arg(QString::fromStdString(sanitize(collectionName)))
+                .arg(QDateTime::currentDateTime().toString("yyyyMMddhhmmss"));
+
+        QString const path = QFileDialog::getSaveFileName(
+                this, tr("Export JSON"),
+                QDir::homePath() + QLatin1Char('/') + defaultName,
+                tr("JSON files (*.json)"));
+        if (path.isEmpty())
+            return;
+
+        // Strict (extended) JSON keeps types ($oid, $date, ...) and stays valid JSON
+        std::string json = "[\n";
+        for (size_t i = 0; i < _documents.size(); ++i) {
+            json += mongo::tojson(_documents[i]->bsonObj(), mongo::Strict, false);
+            if (i + 1 < _documents.size())
+                json += ",\n";
+        }
+        json += "\n]\n";
+
+        QFile file(path);
+        if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+            QMessageBox::warning(this, tr("Export JSON"),
+                                 tr("Cannot open file for writing:\n%1").arg(path));
+            return;
+        }
+        file.write(json.data(), static_cast<qint64>(json.size()));
+        file.close();
     }
 
     void OutputItemContentWidget::refreshOutputItem()
@@ -221,8 +299,9 @@ namespace Robomongo
                                       pipelineModified + ", " + _aggrInfo.options.toString() + ")";
             
             // Create aggr. info with new skip and batchsize
-            AggrInfo const aggrInfo { _aggrInfo.collectionName, skip, batchSize, _aggrInfo.pipeline, 
+            AggrInfo aggrInfo { _aggrInfo.collectionName, skip, batchSize, _aggrInfo.pipeline, 
                                       _aggrInfo.options, _outputWidget->resultIndex(this) };
+            aggrInfo.dbName = _aggrInfo.dbName;
             _shell->setAggrInfo(aggrInfo);
             _shell->execute(query);
         }

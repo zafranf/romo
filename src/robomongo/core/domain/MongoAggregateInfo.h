@@ -13,6 +13,7 @@ namespace Robomongo
         {}
 
         std::string collectionName = "";
+        std::string dbName = "";
         int skip = 0;
         int batchSize = 0;   
         mongo::BSONObj pipeline;

@@ -22,11 +22,13 @@ namespace Robomongo
         void leftClicked(int skip, int limit);
         void rightClicked(int skip, int limit);
         void refreshed(int skip, int limit);
+        void exportRequested();
 
     private Q_SLOTS:
         void leftButton_clicked();
         void rightButton_clicked();
         void refresh();
+        void exportButton_clicked();
 
     private:
         QLineEdit *_skipEdit;
