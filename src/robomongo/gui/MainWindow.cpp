@@ -15,7 +15,6 @@
 #include <QTimer>
 #include <QPushButton>
 #include <QLabel>
-#include <QProgressBar>
 #include <QFileInfo>
 #include <QStatusBar>
 #include <QHBoxLayout>
@@ -691,17 +690,10 @@ namespace Robomongo
         exportLayout->setContentsMargins(8, 0, 8, 0);
         exportLayout->setSpacing(6);
 
-        _exportFileLabel = new QLabel(_exportIndicator);
-        _exportFileLabel->setTextFormat(Qt::PlainText);
+        _exportStatusLabel = new QLabel(_exportIndicator);
+        _exportStatusLabel->setTextFormat(Qt::PlainText);
 
-        _exportProgressBar = new QProgressBar(_exportIndicator);
-        _exportProgressBar->setFixedWidth(140);
-        _exportProgressBar->setFixedHeight(14);
-        _exportProgressBar->setTextVisible(true);
-        _exportProgressBar->setAlignment(Qt::AlignCenter);
-
-        exportLayout->addWidget(_exportFileLabel);
-        exportLayout->addWidget(_exportProgressBar);
+        exportLayout->addWidget(_exportStatusLabel);
 
         statusBar()->addPermanentWidget(_exportIndicator);
         _exportIndicator->hide();
@@ -1164,32 +1156,25 @@ namespace Robomongo
         }
 
         if (event->finished) {
-            // Show a brief completion note in the same right-side widget
-            _exportFileLabel->setText(tr("Exported %1 documents").arg(event->written));
-            _exportProgressBar->hide();
+            _exportStatusLabel->setText(tr("Exported %1 documents").arg(event->written));
             _exportIndicator->show();
             QTimer::singleShot(5000, this, [this]() {
                 _exportIndicator->hide();
-                _exportProgressBar->show();
             });
             return;
         }
 
         QString const fileName = QFileInfo(QString::fromStdString(event->path)).fileName();
-        _exportFileLabel->setText(tr("Downloading: %1").arg(fileName));
-        _exportProgressBar->show();
-        _exportIndicator->show();
-
         if (event->total > 0) {
             int const percent = static_cast<int>(
                 std::min<long long>(100, event->written * 100 / event->total));
-            _exportProgressBar->setRange(0, 100);
-            _exportProgressBar->setValue(percent);
+            _exportStatusLabel->setText(
+                tr("Downloading: %1 (%2%)").arg(fileName, QString::number(percent)));
         }
         else {
-            // Unknown total: busy indicator
-            _exportProgressBar->setRange(0, 0);
+            _exportStatusLabel->setText(tr("Downloading: %1").arg(fileName));
         }
+        _exportIndicator->show();
     }
 
     void MainWindow::keyPressEvent(QKeyEvent *event)
