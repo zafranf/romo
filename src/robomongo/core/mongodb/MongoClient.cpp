@@ -733,6 +733,100 @@ namespace Robomongo
         return written;
     }
 
+    long long MongoClient::countDocuments(const MongoNamespace &ns, const mongo::BSONObj &query)
+    {
+        return static_cast<long long>(_dbclient->count(ns.toString(), query));
+    }
+
+    long long MongoClient::importJson(const std::string &dbName, const std::string &collectionName,
+                                      const std::string &path,
+                                      const std::function<void(long long, long long)> &onProgress)
+    {
+        std::ifstream in(path, std::ios::in | std::ios::binary);
+        if (!in.is_open())
+            throw std::runtime_error("Cannot open file for reading: " + path);
+
+        in.seekg(0, std::ios::end);
+        std::streamsize const size = in.tellg();
+        in.seekg(0, std::ios::beg);
+        if (size <= 0)
+            throw std::runtime_error("File is empty: " + path);
+
+        std::string text(static_cast<size_t>(size), '\0');
+        in.read(&text[0], size);
+        in.close();
+
+        // Extract every top-level {...} object. Works for a JSON array (our
+        // export format), a single object, or one object per line — braces
+        // inside string literals are skipped.
+        std::vector<std::string> raws;
+        int depth = 0;
+        bool inString = false;
+        bool escaped = false;
+        size_t start = 0;
+        for (size_t i = 0; i < text.size(); ++i) {
+            char const c = text[i];
+            if (inString) {
+                if (escaped)
+                    escaped = false;
+                else if (c == '\\')
+                    escaped = true;
+                else if (c == '"')
+                    inString = false;
+                continue;
+            }
+            if (c == '"') {
+                inString = true;
+            }
+            else if (c == '{') {
+                if (depth == 0)
+                    start = i;
+                ++depth;
+            }
+            else if (c == '}' && depth > 0) {
+                --depth;
+                if (depth == 0)
+                    raws.push_back(text.substr(start, i - start + 1));
+            }
+        }
+        if (raws.empty())
+            throw std::runtime_error("No JSON objects found in file: " + path);
+
+        MongoNamespace const ns(dbName, collectionName);
+        long long const total = static_cast<long long>(raws.size());
+        long long written = 0;
+
+        std::vector<mongo::BSONObj> batch;
+        batch.reserve(500);
+        for (std::string const &raw : raws) {
+            mongo::BSONObj doc;
+            try {
+                doc = mongo::fromjson(raw);
+            }
+            catch (const std::exception &ex) {
+                throw std::runtime_error("Invalid JSON at document #" +
+                    std::to_string(written + 1) + ": " + ex.what());
+            }
+            batch.push_back(doc.getOwned());
+            ++written;
+
+            if (batch.size() >= 500) {
+                _dbclient->insert(ns.toString(), batch);
+                checkLastErrorAndThrow(dbName);
+                batch.clear();
+                if (onProgress)
+                    onProgress(written, total);
+            }
+        }
+        if (!batch.empty()) {
+            _dbclient->insert(ns.toString(), batch);
+            checkLastErrorAndThrow(dbName);
+        }
+        if (onProgress)
+            onProgress(written, total);
+        return written;
+    }
+
     MongoCollectionInfo MongoClient::runCollStatsCommand(const std::string &ns)
     {
         MongoCollectionInfo info(ns);

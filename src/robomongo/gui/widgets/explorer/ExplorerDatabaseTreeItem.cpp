@@ -64,13 +64,13 @@ namespace Robomongo
         QAction *dbCurrOps = new QAction("Current Operations", this);
         VERIFY(connect(dbCurrOps, SIGNAL(triggered()), SLOT(ui_dbCurrentOps())));
 
-        QAction *dbKillOp = new QAction("Kill Operation...", this);
+        QAction *dbKillOp = new QAction("Kill Operation", this);
         VERIFY(connect(dbKillOp, SIGNAL(triggered()), SLOT(ui_dbKillOp())));
 
-        QAction *dbDrop = new QAction("Drop Database...", this);
+        QAction *dbDrop = new QAction("Drop Database", this);
         VERIFY(connect(dbDrop, SIGNAL(triggered()), SLOT(ui_dbDrop())));
 
-        QAction *dbRepair = new QAction("Repair Database...", this);
+        QAction *dbRepair = new QAction("Repair Database", this);
         VERIFY(connect(dbRepair, SIGNAL(triggered()), SLOT(ui_dbRepair())));
 
         QAction *refreshDatabase = new QAction("Refresh", this);

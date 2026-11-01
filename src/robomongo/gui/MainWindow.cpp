@@ -1150,13 +1150,16 @@ namespace Robomongo
     {
         if (event->isError()) {
             _exportIndicator->hide();
-            QMessageBox::warning(this, tr("Export failed"),
+            QMessageBox::warning(this, event->isImport ? tr("Import failed")
+                                                       : tr("Export failed"),
                 QString::fromStdString(event->error().errorMessage()));
             return;
         }
 
         if (event->finished) {
-            _exportStatusLabel->setText(tr("Exported %1 documents").arg(event->written));
+            _exportStatusLabel->setText(event->isImport
+                ? tr("Imported %1 documents").arg(event->written)
+                : tr("Exported %1 documents").arg(event->written));
             _exportIndicator->show();
             QTimer::singleShot(5000, this, [this]() {
                 _exportIndicator->hide();
@@ -1165,14 +1168,15 @@ namespace Robomongo
         }
 
         QString const fileName = QFileInfo(QString::fromStdString(event->path)).fileName();
+        QString const verb = event->isImport ? tr("Importing") : tr("Exporting");
         if (event->total > 0) {
             int const percent = static_cast<int>(
                 std::min<long long>(100, event->written * 100 / event->total));
             _exportStatusLabel->setText(
-                tr("Downloading: %1 (%2%)").arg(fileName, QString::number(percent)));
+                tr("%1: %2 (%3%)").arg(verb, fileName, QString::number(percent)));
         }
         else {
-            _exportStatusLabel->setText(tr("Downloading: %1").arg(fileName));
+            _exportStatusLabel->setText(tr("%1: %2").arg(verb, fileName));
         }
         _exportIndicator->show();
     }

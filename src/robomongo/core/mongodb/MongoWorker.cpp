@@ -613,16 +613,29 @@ namespace Robomongo
      */
     void MongoWorker::handle(ExportQueryRequest *event)
     {
-        auto const publishProgress = [this, event](long long written, bool finished) {
-            // publish (not reply): the initiator widget may be closed while the
-            // export keeps running; MainWindow owns the progress display.
-            AppRegistry::instance().bus()->publish(
-                new ExportProgressEvent(this, written, event->expectedTotal(),
-                                        finished, event->path()));
-        };
-
         try {
             boost::scoped_ptr<MongoClient> client { getClient() };
+
+            // Total for percent display: use what GUI knew (header count),
+            // otherwise compute server-side (e.g. "Export Collection" menu).
+            long long total = event->expectedTotal();
+            if (total <= 0 && !event->aggrInfo().isValid) {
+                try {
+                    total = client->countDocuments(event->queryInfo()._info._ns,
+                                                   event->queryInfo()._query);
+                }
+                catch (...) {
+                    total = -1; // progress shows without percent
+                }
+            }
+
+            auto const publishProgress = [this, event, total](long long written, bool finished) {
+                // publish (not reply): the initiator widget may be closed while the
+                // export keeps running; MainWindow owns the progress display.
+                AppRegistry::instance().bus()->publish(
+                    new ExportProgressEvent(this, written, total,
+                                            finished, event->path(), false));
+            };
 
             // Progress: at most every ~100ms to avoid flooding the GUI thread
             QElapsedTimer progressTimer;
@@ -645,7 +658,45 @@ namespace Robomongo
         }
         catch (const std::exception &ex) {
             AppRegistry::instance().bus()->publish(
-                new ExportProgressEvent(this, EventError(ex.what())));
+                new ExportProgressEvent(this, EventError(ex.what()), false));
+            sendLog(this, LogEvent::RBM_ERROR, std::string(ex.what()));
+        }
+    }
+
+    /**
+     * @brief Import documents from a JSON file into a collection
+     */
+    void MongoWorker::handle(ImportDocumentsRequest *event)
+    {
+        try {
+            boost::scoped_ptr<MongoClient> client { getClient() };
+
+            // Progress: at most every ~100ms to avoid flooding the GUI thread
+            QElapsedTimer progressTimer;
+            progressTimer.start();
+            long long lastReported = -1;
+            auto const onProgress = [this, event, &progressTimer, &lastReported](
+                    long long written, long long total) {
+                if (progressTimer.elapsed() >= 100 && written != lastReported) {
+                    progressTimer.restart();
+                    lastReported = written;
+                    AppRegistry::instance().bus()->publish(
+                        new ExportProgressEvent(this, written, total,
+                                                false, event->path(), true));
+                }
+            };
+
+            long long const written = client->importJson(
+                event->dbName(), event->collectionName(), event->path(), onProgress);
+
+            client->done();
+            AppRegistry::instance().bus()->publish(
+                new ExportProgressEvent(this, written, written,
+                                        true, event->path(), true));
+        }
+        catch (const std::exception &ex) {
+            AppRegistry::instance().bus()->publish(
+                new ExportProgressEvent(this, EventError(ex.what()), true));
             sendLog(this, LogEvent::RBM_ERROR, std::string(ex.what()));
         }
     }

@@ -2,6 +2,9 @@
 
 #include <QAction>
 #include <QMenu>
+#include <QFileDialog>
+#include <QDateTime>
+#include <QDir>
 
 #include "robomongo/gui/widgets/explorer/AddEditIndexDialog.h"
 #include "robomongo/gui/widgets/explorer/ExplorerCollectionIndexesDir.h"
@@ -16,6 +19,7 @@
 #include "robomongo/core/settings/ConnectionSettings.h"
 #include "robomongo/core/domain/MongoCollection.h"
 #include "robomongo/core/domain/MongoServer.h"
+#include "robomongo/core/mongodb/MongoWorker.h"
 #include "robomongo/core/domain/App.h"
 #include "robomongo/core/utils/QtUtils.h"
 #include "robomongo/core/utils/Logger.h"
@@ -41,15 +45,18 @@ namespace Robomongo
         QTreeWidgetItem *parent, ExplorerDatabaseTreeItem *databaseItem, MongoCollection *collection) 
         : BaseClass(parent), _collection(collection), _databaseItem(databaseItem)
     {
-        QAction *addDocument = new QAction("Insert Document...", this);
+        QAction *importDocuments = new QAction("Import Documents", this);
+        VERIFY(connect(importDocuments, SIGNAL(triggered()), SLOT(ui_importDocuments())));
+
+        QAction *addDocument = new QAction("Insert Document", this);
         VERIFY(connect(addDocument, SIGNAL(triggered()), SLOT(ui_addDocument())));
 
-        QAction *updateDocument = new QAction("Update Documents...", this);
+        QAction *updateDocument = new QAction("Update Documents", this);
         VERIFY(connect(updateDocument, SIGNAL(triggered()), SLOT(ui_updateDocument())));
-        QAction *removeDocument = new QAction("Remove Documents...", this);
+        QAction *removeDocument = new QAction("Remove Documents", this);
         VERIFY(connect(removeDocument, SIGNAL(triggered()), SLOT(ui_removeDocument())));
 
-        QAction *removeAllDocuments = new QAction("Remove All Documents...", this);
+        QAction *removeAllDocuments = new QAction("Remove All Documents", this);
         VERIFY(connect(removeAllDocuments, SIGNAL(triggered()), SLOT(ui_removeAllDocuments())));
 
         QAction *collectionStats = new QAction("Statistics", this);
@@ -69,12 +76,15 @@ namespace Robomongo
         QAction *shardDistribution = new QAction("Shard Distribution", this);
         VERIFY(connect(shardDistribution, SIGNAL(triggered()), SLOT(ui_shardDistribution())));
 
-        QAction *dropCollection = new QAction("Drop Collection...", this);
+        QAction *dropCollection = new QAction("Drop Collection", this);
         VERIFY(connect(dropCollection, SIGNAL(triggered()), SLOT(ui_dropCollection())));
 
-        QAction *renameCollection = new QAction("Rename Collection...", this);
+        QAction *exportCollection = new QAction("Export Collection", this);
+        VERIFY(connect(exportCollection, SIGNAL(triggered()), SLOT(ui_exportCollection())));
+
+        QAction *renameCollection = new QAction("Rename Collection", this);
         VERIFY(connect(renameCollection, SIGNAL(triggered()), SLOT(ui_renameCollection())));
-        QAction *duplicateCollection = new QAction("Duplicate Collection...", this);
+        QAction *duplicateCollection = new QAction("Duplicate Collection", this);
         VERIFY(connect(duplicateCollection, SIGNAL(triggered()), SLOT(ui_duplicateCollection())));
 
         // Disabling for 0.8.5 release as this is currently a broken misfeature (see discussion on issue #398)
@@ -86,6 +96,7 @@ namespace Robomongo
 
         BaseClass::_contextMenu->addAction(viewCollection);
         BaseClass::_contextMenu->addSeparator();
+        BaseClass::_contextMenu->addAction(importDocuments);
         BaseClass::_contextMenu->addAction(addDocument);
         BaseClass::_contextMenu->addAction(updateDocument);
         BaseClass::_contextMenu->addAction(removeDocument);
@@ -96,6 +107,7 @@ namespace Robomongo
         // Disabling for 0.8.5 release as this is currently a broken misfeature (see discussion on issue #398)
         // BaseClass::_contextMenu->addAction(copyCollectionToDiffrentServer);
         BaseClass::_contextMenu->addAction(dropCollection);
+        BaseClass::_contextMenu->addAction(exportCollection);
         BaseClass::_contextMenu->addSeparator();
         BaseClass::_contextMenu->addAction(collectionStats);
         BaseClass::_contextMenu->addSeparator();
@@ -239,6 +251,22 @@ namespace Robomongo
         }
     }
 
+    void ExplorerCollectionTreeItem::ui_importDocuments()
+    {
+        MongoDatabase *database = _collection->database();
+        MongoServer *server = database->server();
+
+        QString const path = QFileDialog::getOpenFileName(
+            treeWidget(), tr("Import Documents"), QDir::homePath(),
+            tr("JSON files (*.json)"));
+        if (path.isEmpty())
+            return;
+
+        AppRegistry::instance().bus()->send(server->worker(),
+            new ImportDocumentsRequest(this, database->name(), _collection->name(),
+                                       path.toStdString()));
+    }
+
     void ExplorerCollectionTreeItem::ui_removeDocument()
     {
         openCurrentCollectionShell(
@@ -300,6 +328,48 @@ namespace Robomongo
             MongoDatabase *database = _collection->database();
             database->dropCollection(_collection->name());
         }
+    }
+
+    void ExplorerCollectionTreeItem::ui_exportCollection()
+    {
+        MongoDatabase *database = _collection->database();
+        MongoServer *server = database->server();
+        ConnectionSettings *settings = server->connectionRecord();
+
+        auto const sanitize = [](std::string const &value) {
+            std::string result;
+            result.reserve(value.size());
+            for (char const c : value) {
+                bool const bad = (c == '/' || c == '\\' || c == ':' || c == '*' ||
+                                  c == '?' || c == '"' || c == '<' || c == '>' ||
+                                  c == '|' || c == ' ');
+                result += bad ? '_' : c;
+            }
+            return result.empty() ? std::string("unnamed") : result;
+        };
+
+        QString const defaultName = QString("%1-%2-%3-%4.json")
+                .arg(QString::fromStdString(sanitize(settings->connectionName())))
+                .arg(QString::fromStdString(sanitize(database->name())))
+                .arg(QString::fromStdString(sanitize(_collection->name())))
+                .arg(QDateTime::currentDateTime().toString("yyMMddhhmm"));
+
+        QString const path = QFileDialog::getSaveFileName(
+            treeWidget(), tr("Export Collection"),
+            QDir::homePath() + QLatin1Char('/') + defaultName,
+            tr("JSON files (*.json)"));
+        if (path.isEmpty())
+            return;
+
+        // Full collection: empty query, no pagination. Worker computes the
+        // document count server-side for the progress percent.
+        CollectionInfo const info(settings->getFullAddress(), database->name(),
+                                  _collection->name());
+        MongoQueryInfo const queryInfo(info, mongo::BSONObj(), mongo::BSONObj(),
+                                       0, 0, 0, 0, false);
+
+        AppRegistry::instance().bus()->send(server->worker(),
+            new ExportQueryRequest(this, queryInfo, AggrInfo(), path.toStdString(), -1));
     }
 
     void ExplorerCollectionTreeItem::ui_duplicateCollection()

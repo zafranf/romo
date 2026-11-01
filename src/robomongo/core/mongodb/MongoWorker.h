@@ -115,6 +115,11 @@ namespace Robomongo
          */
         void handle(ExportQueryRequest *event);
 
+        /**
+         * @brief Import documents from a JSON file into a collection (batched)
+         */
+        void handle(ImportDocumentsRequest *event);
+
         void handle(AutocompleteRequest *event);
         void handle(CreateDatabaseRequest *event);
         void handle(DropDatabaseRequest *event);

@@ -16,10 +16,10 @@ namespace Robomongo
     ExplorerCollectionIndexesDir::ExplorerCollectionIndexesDir(QTreeWidgetItem *parent)
         :BaseClass(parent)
     {
-        QAction *addIndex = new QAction("Add Index...", this);
+        QAction *addIndex = new QAction("Add Index", this);
         VERIFY(connect(addIndex, SIGNAL(triggered()), SLOT(ui_addIndex())));
 
-        QAction *reIndex = new QAction("Rebuild Indexes...", this);
+        QAction *reIndex = new QAction("Rebuild Indexes", this);
         VERIFY(connect(reIndex, SIGNAL(triggered()), SLOT(ui_reIndex())));
 
         QAction *viewIndex = new QAction("View Indexes", this);

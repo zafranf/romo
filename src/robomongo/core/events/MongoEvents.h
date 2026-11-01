@@ -953,6 +953,7 @@ namespace Robomongo
     /**
      * @brief Export progress/completion, published by worker to the GUI.
      *        finished=true on success or error (error carried by Event base).
+     *        Also used for import progress (isImport=true).
      */
     class ExportProgressEvent : public Event
     {
@@ -960,16 +961,40 @@ namespace Robomongo
 
     public:
         ExportProgressEvent(QObject *sender, long long written, long long total,
-                            bool finished, const std::string &path) :
-            Event(sender), written(written), total(total), finished(finished), path(path) {}
+                            bool finished, const std::string &path, bool isImport = false) :
+            Event(sender), written(written), total(total), finished(finished),
+            path(path), isImport(isImport) {}
 
-        ExportProgressEvent(QObject *sender, const EventError &error) :
-            Event(sender, error), written(0), total(0), finished(true) {}
+        ExportProgressEvent(QObject *sender, const EventError &error, bool isImport = false) :
+            Event(sender, error), written(0), total(0), finished(true), isImport(isImport) {}
 
         long long written;
         long long total;
         bool finished;
         std::string path;
+        bool isImport;
+    };
+
+    /**
+     * @brief Ask worker to import documents from a JSON file into a collection.
+     */
+    class ImportDocumentsRequest : public Event
+    {
+        R_EVENT
+
+    public:
+        ImportDocumentsRequest(QObject *sender, const std::string &dbName,
+                               const std::string &collectionName, const std::string &path) :
+            Event(sender), _dbName(dbName), _collectionName(collectionName), _path(path) {}
+
+        std::string dbName() const { return _dbName; }
+        std::string collectionName() const { return _collectionName; }
+        std::string path() const { return _path; }
+
+    private:
+        std::string _dbName;
+        std::string _collectionName;
+        std::string _path;
     };
 
     class AutocompleteRequest : public Event

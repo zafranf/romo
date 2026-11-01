@@ -41,6 +41,7 @@ namespace Robomongo
 
     private Q_SLOTS:
         void ui_addDocument();
+        void ui_importDocuments();
         void ui_removeDocument();
         void ui_updateDocument();
         void ui_collectionStatistics();
@@ -51,6 +52,7 @@ namespace Robomongo
         void ui_shardVersion();
         void ui_shardDistribution();
         void ui_dropCollection();
+        void ui_exportCollection();
         void ui_renameCollection();
         void ui_duplicateCollection();
         void ui_copyToCollectionToDiffrentServer();

@@ -70,6 +70,22 @@ namespace Robomongo
         long long exportAggregateJson(const AggrInfo &aggrInfo, const std::string &path,
                                       const std::function<void(long long)> &onProgress);
 
+        /**
+         * @brief Import documents from a JSON file (array of extended-JSON
+         *        objects, single object, or one object per line) into a
+         *        collection, inserted in batches. onProgress(written, total).
+         * @return number of documents imported
+         */
+        long long importJson(const std::string &dbName, const std::string &collectionName,
+                             const std::string &path,
+                             const std::function<void(long long, long long)> &onProgress);
+
+        /**
+         * @brief Server-side document count for a query (used to compute
+         *        export progress percent when GUI doesn't know the total).
+         */
+        long long countDocuments(const MongoNamespace &ns, const mongo::BSONObj &query);
+
         MongoCollectionInfo runCollStatsCommand(const std::string &ns);
         std::vector<MongoCollectionInfo> runCollStatsCommand(const std::vector<std::string> &namespaces);
 
