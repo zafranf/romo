@@ -1,5 +1,6 @@
 #include "robomongo/gui/widgets/workarea/PagingWidget.h"
 
+#include <QFrame>
 #include <QHBoxLayout>
 #include <QLineEdit>
 #include <QPushButton>
@@ -18,6 +19,15 @@ namespace
         button->setFixedSize(24, 24);
         button->setFlat(true);
         return button;
+    }
+
+    QFrame *createVerticalLine()
+    {
+        QFrame *vline = new QFrame();
+        vline->setFrameShape(QFrame::VLine);
+        vline->setFrameShadow(QFrame::Sunken);
+        vline->setFixedWidth(5);
+        return vline;
     }
 }
 
@@ -64,7 +74,7 @@ namespace Robomongo
         layout->addWidget(_batchSizeEdit);
         layout->addSpacing(0);
         layout->addWidget(rightButton);
-        layout->addSpacing(4);
+        layout->addWidget(createVerticalLine());
         layout->addWidget(exportButton);
         setLayout(layout);
     }

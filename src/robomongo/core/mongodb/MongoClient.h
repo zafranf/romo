@@ -3,8 +3,11 @@
 #include <mongo/client/dbclient_base.h>
 #include <mongo/bson/bsonobj.h>
 
+#include <functional>
+
 #include "robomongo/core/Core.h"
 #include "robomongo/core/domain/MongoQueryInfo.h"
+#include "robomongo/core/domain/MongoAggregateInfo.h"
 #include "robomongo/core/domain/MongoUser.h"
 #include "robomongo/core/domain/MongoFunction.h"
 #include "robomongo/core/events/MongoEventsInfo.h"
@@ -51,6 +54,21 @@ namespace Robomongo
         void saveDocument(const mongo::BSONObj &obj, const MongoNamespace &ns);
         void removeDocuments(const MongoNamespace &ns, mongo::Query query, bool justOne = true);
         std::vector<MongoDocumentPtr> query(const MongoQueryInfo &info);
+
+        /**
+         * @brief Stream a full (unpaginated) query result to a JSON array file.
+         *        onProgress is invoked periodically with the number of documents
+         *        written so far. Returns the total number of documents written.
+         */
+        long long exportQueryJson(const MongoQueryInfo &info, const std::string &path,
+                                  const std::function<void(long long)> &onProgress);
+
+        /**
+         * @brief Stream a full (unpaginated) aggregate pipeline result to a JSON
+         *        array file. Refuses pipelines containing $out/$merge.
+         */
+        long long exportAggregateJson(const AggrInfo &aggrInfo, const std::string &path,
+                                      const std::function<void(long long)> &onProgress);
 
         MongoCollectionInfo runCollStatsCommand(const std::string &ns);
         std::vector<MongoCollectionInfo> runCollStatsCommand(const std::vector<std::string> &namespaces);

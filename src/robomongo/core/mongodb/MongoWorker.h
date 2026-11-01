@@ -110,6 +110,11 @@ namespace Robomongo
         void retry(ExecuteScriptRequest *event);
         void handle(StopScriptRequest *event);
 
+        /**
+         * @brief Export full query/aggregate result to a JSON file (streaming)
+         */
+        void handle(ExportQueryRequest *event);
+
         void handle(AutocompleteRequest *event);
         void handle(CreateDatabaseRequest *event);
         void handle(DropDatabaseRequest *event);

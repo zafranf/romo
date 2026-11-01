@@ -1,6 +1,10 @@
 #include "robomongo/core/mongodb/MongoClient.h"
 
+#include <fstream>
+#include <cstdio>
+
 #include "mongo/db/namespace_string.h"
+#include <mongo/bson/json.h>
 
 #include "robomongo/core/domain/MongoDocument.h"
 #include "robomongo/core/utils/BsonUtils.h"
@@ -575,6 +579,158 @@ namespace Robomongo
         }
 
         return docs;
+    }
+
+    long long MongoClient::exportQueryJson(const MongoQueryInfo &info, const std::string &path,
+                                           const std::function<void(long long)> &onProgress)
+    {
+        MongoNamespace ns(info._info._ns);
+
+        std::ofstream out(path, std::ios::trunc);
+        if (!out.is_open())
+            throw std::runtime_error("Cannot open file for writing: " + path);
+
+        // Full result: no skip/limit pagination, same criteria as the displayed count.
+        std::unique_ptr<mongo::DBClientCursor> cursor = _dbclient->query(
+            mongo::NamespaceString(ns.databaseName(), ns.collectionName()),
+            info._query, 0, 0,
+            info._fields.nFields() ? &info._fields : nullptr,
+            info._options, 1000);
+        if (!cursor)
+            throw std::runtime_error("Network error while attempting to run query");
+
+        out << "[\n";
+        long long written = 0;
+        bool first = true;
+        while (cursor->more()) {
+            mongo::BSONObj const obj = cursor->next();
+            if (!first)
+                out << ",\n";
+            out << mongo::tojson(obj, mongo::Strict, false);
+            first = false;
+            ++written;
+            if (onProgress && (written % 64 == 0))
+                onProgress(written);
+        }
+        out << (first ? "]\n" : "\n]\n");
+        out.flush();
+        if (!out)
+            throw std::runtime_error("Error writing file (disk full?): " + path);
+        out.close();
+
+        if (onProgress)
+            onProgress(written);
+        return written;
+    }
+
+    long long MongoClient::exportAggregateJson(const AggrInfo &aggrInfo, const std::string &path,
+                                               const std::function<void(long long)> &onProgress)
+    {
+        // Re-running a pipeline with $out/$merge would write to another
+        // collection as a side effect — refuse instead.
+        for (int i = 0; ; ++i) {
+            mongo::BSONElement const stage = aggrInfo.pipeline.getField(std::to_string(i));
+            if (stage.eoo())
+                break;
+            mongo::BSONObj const stageObj = stage.Obj();
+            if (!stageObj.getField("$out").eoo() || !stageObj.getField("$merge").eoo())
+                throw std::runtime_error(
+                    "Cannot export an aggregate pipeline that contains $out/$merge.");
+        }
+
+        std::ofstream out(path, std::ios::trunc);
+        if (!out.is_open())
+            throw std::runtime_error("Cannot open file for writing: " + path);
+
+        // Rebuild BSONArray pipeline from {"0": stage0, "1": stage1, ...}
+        mongo::BSONArrayBuilder pipeline;
+        for (int i = 0; ; ++i) {
+            mongo::BSONElement const stage = aggrInfo.pipeline.getField(std::to_string(i));
+            if (stage.eoo())
+                break;
+            pipeline.append(stage.Obj());
+        }
+
+        mongo::BSONObjBuilder cmd;
+        cmd.append("aggregate", aggrInfo.collectionName);
+        cmd.append("pipeline", pipeline.arr());
+        cmd.append("cursor", BSON("batchSize" << 1000));
+        // Merge user options (allowDiskUse, ...) skipping keys we already set
+        for (mongo::BSONObjIterator it(aggrInfo.options); it.more();) {
+            mongo::BSONElement const option = it.next();
+            std::string const name = option.fieldName();
+            if (name == "aggregate" || name == "pipeline" || name == "cursor")
+                continue;
+            cmd.append(option);
+        }
+
+        mongo::BSONObj res;
+        _dbclient->runCommand(aggrInfo.dbName, cmd.obj(), res);
+        if (!res["ok"].trueValue()) {
+            mongo::BSONElement const err = res.getField("errmsg");
+            throw std::runtime_error(err.type() == mongo::String
+                ? "Aggregate failed: " + err.String()
+                : std::string("Aggregate export failed."));
+        }
+
+        out << "[\n";
+        long long written = 0;
+        bool first = true;
+        auto const writeDocs = [&](mongo::BSONObj const &docs) {
+            for (mongo::BSONObjIterator it(docs); it.more();) {
+                mongo::BSONObj const doc = it.next().Obj();
+                if (!first)
+                    out << ",\n";
+                out << mongo::tojson(doc, mongo::Strict, false);
+                first = false;
+                ++written;
+                if (onProgress && (written % 64 == 0))
+                    onProgress(written);
+            }
+        };
+
+        mongo::BSONElement const cursorEl = res.getField("cursor");
+        if (cursorEl.eoo()) {
+            // Old-style response: whole result in "result" array
+            mongo::BSONElement const resultEl = res.getField("result");
+            if (resultEl.type() == mongo::Array)
+                writeDocs(resultEl.Obj());
+        }
+        else {
+            mongo::BSONObj const cursor = cursorEl.Obj();
+            long long const cursorId = cursor.getField("id").numberLong();
+            mongo::BSONElement const firstBatch = cursor.getField("firstBatch");
+            if (firstBatch.type() == mongo::Array)
+                writeDocs(firstBatch.Obj());
+
+            if (cursorId != 0) {
+                // Driver getMore keeps draining subsequent batches on more()
+                std::unique_ptr<mongo::DBClientCursor> more = _dbclient->getMore(
+                    aggrInfo.dbName + "." + aggrInfo.collectionName, cursorId, 1000);
+                if (!more)
+                    throw std::runtime_error("Network error during aggregate export");
+                while (more->more()) {
+                    mongo::BSONObj const doc = more->next();
+                    if (!first)
+                        out << ",\n";
+                    out << mongo::tojson(doc, mongo::Strict, false);
+                    first = false;
+                    ++written;
+                    if (onProgress && (written % 64 == 0))
+                        onProgress(written);
+                }
+            }
+        }
+
+        out << (first ? "]\n" : "\n]\n");
+        out.flush();
+        if (!out)
+            throw std::runtime_error("Error writing file (disk full?): " + path);
+        out.close();
+
+        if (onProgress)
+            onProgress(written);
+        return written;
     }
 
     MongoCollectionInfo MongoClient::runCollStatsCommand(const std::string &ns)

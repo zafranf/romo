@@ -923,6 +923,53 @@ namespace Robomongo
         std::vector<MongoDocumentPtr> documents;
     };
 
+    /**
+     * @brief Ask worker to export a full (unpaginated) query/aggregate result
+     *        to a JSON file, streaming documents to disk.
+     */
+    class ExportQueryRequest : public Event
+    {
+        R_EVENT
+
+    public:
+        ExportQueryRequest(QObject *sender, const MongoQueryInfo &queryInfo,
+                           const AggrInfo &aggrInfo, const std::string &path,
+                           qint64 expectedTotal) :
+            Event(sender), _queryInfo(queryInfo), _aggrInfo(aggrInfo),
+            _path(path), _expectedTotal(expectedTotal) {}
+
+        MongoQueryInfo queryInfo() const { return _queryInfo; }
+        AggrInfo aggrInfo() const { return _aggrInfo; }
+        std::string path() const { return _path; }
+        qint64 expectedTotal() const { return _expectedTotal; }
+
+    private:
+        MongoQueryInfo _queryInfo;
+        AggrInfo _aggrInfo;
+        std::string _path;
+        qint64 _expectedTotal;
+    };
+
+    /**
+     * @brief Export progress/completion, published by worker to the GUI.
+     *        finished=true on success or error (error carried by Event base).
+     */
+    class ExportProgressEvent : public Event
+    {
+        R_EVENT
+
+    public:
+        ExportProgressEvent(QObject *sender, qint64 written, qint64 total, bool finished) :
+            Event(sender), written(written), total(total), finished(finished) {}
+
+        ExportProgressEvent(QObject *sender, const EventError &error) :
+            Event(sender, error), written(0), total(0), finished(true) {}
+
+        qint64 written;
+        qint64 total;
+        bool finished;
+    };
+
     class AutocompleteRequest : public Event
     {
         R_EVENT

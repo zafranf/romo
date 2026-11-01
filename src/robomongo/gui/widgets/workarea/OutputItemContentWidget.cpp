@@ -9,10 +9,12 @@
 #include <Qsci/qscilexerjavascript.h>
 
 #include "robomongo/core/AppRegistry.h"
+#include "robomongo/core/EventBus.h"
 #include "robomongo/core/settings/SettingsManager.h"
 #include "robomongo/core/utils/QtUtils.h"
 #include "robomongo/core/domain/MongoShell.h"
 #include "robomongo/core/domain/MongoServer.h"
+#include "robomongo/core/mongodb/MongoWorker.h"
 #include "robomongo/core/domain/MongoAggregateInfo.h"
 
 #include "mongo/bson/json.h"
@@ -168,13 +170,18 @@ namespace Robomongo
 
     void OutputItemContentWidget::exportJson()
     {
-        if (_documents.empty()) {
+        if (!_queryInfo._info.isValid() && !_aggrInfo.isValid) {
+            QMessageBox::information(this, tr("Export JSON"),
+                                     tr("There is nothing to export for this result."));
+            return;
+        }
+        if (_totalCount == 0) {
             QMessageBox::information(this, tr("Export JSON"),
                                      tr("There are no documents to export."));
             return;
         }
 
-        // <connection>-<db>-<collection>-<yyyyMMddhhmmss>.json
+        // <connection>-<db>-<collection>-<yyMMddhhmm>.json
         std::string const connectionName = _shell && _shell->server()
                 && _shell->server()->connectionRecord()
             ? _shell->server()->connectionRecord()->connectionName()
@@ -207,7 +214,7 @@ namespace Robomongo
                 .arg(QString::fromStdString(sanitize(connectionName)))
                 .arg(QString::fromStdString(sanitize(dbName)))
                 .arg(QString::fromStdString(sanitize(collectionName)))
-                .arg(QDateTime::currentDateTime().toString("yyyyMMddhhmmss"));
+                .arg(QDateTime::currentDateTime().toString("yyMMddhhmm"));
 
         QString const path = QFileDialog::getSaveFileName(
                 this, tr("Export JSON"),
@@ -216,23 +223,16 @@ namespace Robomongo
         if (path.isEmpty())
             return;
 
-        // Strict (extended) JSON keeps types ($oid, $date, ...) and stays valid JSON
-        std::string json = "[\n";
-        for (size_t i = 0; i < _documents.size(); ++i) {
-            json += mongo::tojson(_documents[i]->bsonObj(), mongo::Strict, false);
-            if (i + 1 < _documents.size())
-                json += ",\n";
-        }
-        json += "\n]\n";
+        // Full result: strip pagination so the export matches the displayed
+        // (total) count instead of the current page. Worker streams to disk
+        // and publishes ExportProgressEvent for the status-bar indicator.
+        MongoQueryInfo info(_queryInfo);
+        info._limit = 0;  // unlimited
+        info._skip = 0;
 
-        QFile file(path);
-        if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
-            QMessageBox::warning(this, tr("Export JSON"),
-                                 tr("Cannot open file for writing:\n%1").arg(path));
-            return;
-        }
-        file.write(json.data(), static_cast<qint64>(json.size()));
-        file.close();
+        AppRegistry::instance().bus()->send(
+                _shell->server()->worker(),
+                new ExportQueryRequest(this, info, _aggrInfo, path.toStdString(), _totalCount));
     }
 
     void OutputItemContentWidget::refreshOutputItem()

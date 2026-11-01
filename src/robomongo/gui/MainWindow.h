@@ -12,6 +12,7 @@ class QPushButton;
 class QTreeWidgetItem;
 class QNetworkReply;
 class QNetworkAccessManager;
+class QMovie;
 QT_END_NAMESPACE
 
 namespace Robomongo
@@ -20,6 +21,7 @@ namespace Robomongo
     class ScriptExecutingEvent;
     class ScriptExecutedEvent;
     class OperationFailedEvent;
+    class ExportProgressEvent;
 
     class QueryWidgetUpdatedEvent;
     class WorkAreaTabWidget;
@@ -82,6 +84,7 @@ namespace Robomongo
         void handle(ScriptExecutedEvent *event);
         void handle(QueryWidgetUpdatedEvent *event);
         void handle(OperationFailedEvent *event);
+        void handle(ExportProgressEvent *event);
 
     protected:
         void keyPressEvent(QKeyEvent *event) override;
@@ -138,6 +141,10 @@ namespace Robomongo
 
         ConnectionMenu *_connectionsMenu;
         QToolButton *_connectButton;
+
+        // JSON export progress indicator (right side of the status bar)
+        QWidget *_exportIndicator;
+        QLabel *_exportPercentLabel;
         QMenu *_viewMenu;
         QMenu *_toolbarsMenu;
         QAction *_connectAction;

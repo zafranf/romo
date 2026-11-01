@@ -4,6 +4,7 @@
 #include <exception>
 
 #include <QThread>
+#include <QElapsedTimer>
 
 #include <fstream>
 #include <mutex>
@@ -603,6 +604,47 @@ namespace Robomongo
             }
 
             reply(event->sender(), new ExecuteQueryResponse(this, EventError(ex.what())));
+            sendLog(this, LogEvent::RBM_ERROR, std::string(ex.what()));
+        }
+    }
+
+    /**
+     * @brief Export javascript
+     */
+    void MongoWorker::handle(ExportQueryRequest *event)
+    {
+        auto const publishProgress = [this, event](long long written, bool finished) {
+            // publish (not reply): the initiator widget may be closed while the
+            // export keeps running; MainWindow owns the progress display.
+            AppRegistry::instance().bus()->publish(
+                new ExportProgressEvent(this, written, event->expectedTotal(), finished));
+        };
+
+        try {
+            boost::scoped_ptr<MongoClient> client { getClient() };
+
+            // Progress: at most every ~100ms to avoid flooding the GUI thread
+            QElapsedTimer progressTimer;
+            progressTimer.start();
+            long long lastReported = -1;
+            auto const onProgress = [&](long long written) {
+                if (progressTimer.elapsed() >= 100 && written != lastReported) {
+                    progressTimer.restart();
+                    lastReported = written;
+                    publishProgress(written, false);
+                }
+            };
+
+            qint64 const written = event->aggrInfo().isValid
+                ? client->exportAggregateJson(event->aggrInfo(), event->path(), onProgress)
+                : client->exportQueryJson(event->queryInfo(), event->path(), onProgress);
+
+            client->done();
+            publishProgress(written, true);
+        }
+        catch (const std::exception &ex) {
+            AppRegistry::instance().bus()->publish(
+                new ExportProgressEvent(this, EventError(ex.what())));
             sendLog(this, LogEvent::RBM_ERROR, std::string(ex.what()));
         }
     }

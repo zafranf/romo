@@ -15,6 +15,7 @@
 #include <QTimer>
 #include <QPushButton>
 #include <QLabel>
+#include <QMovie>
 #include <QStatusBar>
 #include <QHBoxLayout>
 #include <QSettings>
@@ -609,6 +610,7 @@ namespace Robomongo
         AppRegistry::instance().bus()->subscribe(this, ScriptExecutingEvent::Type);
         AppRegistry::instance().bus()->subscribe(this, QueryWidgetUpdatedEvent::Type);
         AppRegistry::instance().bus()->subscribe(this, OperationFailedEvent::Type);
+        AppRegistry::instance().bus()->subscribe(this, ExportProgressEvent::Type);
 
         restoreWindowSettings();
 
@@ -681,6 +683,28 @@ namespace Robomongo
 
         statusBar()->insertWidget(0, log);
         statusBar()->setStyleSheet("QStatusBar::item { border: 0px solid black };");
+
+        // JSON export progress indicator (right side of the status bar)
+        _exportIndicator = new QWidget(this);
+        QHBoxLayout *exportLayout = new QHBoxLayout(_exportIndicator);
+        exportLayout->setContentsMargins(8, 0, 8, 0);
+        exportLayout->setSpacing(4);
+
+        QLabel *exportText = new QLabel(tr("Downloading"), _exportIndicator);
+        _exportPercentLabel = new QLabel(_exportIndicator);
+
+        QLabel *spinner = new QLabel(_exportIndicator);
+        QMovie *spinnerMovie = new QMovie(":/robomongo/icons/loading.gif", QByteArray(), _exportIndicator);
+        spinnerMovie->setScaledSize(QSize(11, 11));
+        spinner->setMovie(spinnerMovie);
+        spinnerMovie->start();
+
+        exportLayout->addWidget(exportText);
+        exportLayout->addWidget(spinner);
+        exportLayout->addWidget(_exportPercentLabel);
+
+        statusBar()->addPermanentWidget(_exportIndicator);
+        _exportIndicator->hide();
     }
 
     void MainWindow::changeStyle(QAction *ac)
@@ -1128,6 +1152,32 @@ namespace Robomongo
             << "Error:" << std::endl << event->technicalErrorMessage;
 
         QMessageBox::critical(NULL, "Operation failed", QtUtils::toQString(ss.str()));
+    }
+
+    void MainWindow::handle(ExportProgressEvent *event)
+    {
+        if (event->isError()) {
+            _exportIndicator->hide();
+            QMessageBox::warning(this, tr("Export failed"),
+                QString::fromStdString(event->error().errorMessage()));
+            return;
+        }
+
+        if (event->finished) {
+            _exportIndicator->hide();
+            statusBar()->showMessage(tr("Exported %1 documents").arg(event->written), 5000);
+            return;
+        }
+
+        _exportIndicator->show();
+        if (event->total > 0) {
+            int const percent = static_cast<int>(
+                std::min<qint64>(99, event->written * 100 / event->total));
+            _exportPercentLabel->setText(tr("%1%").arg(percent));
+        }
+        else {
+            _exportPercentLabel->setText(tr("%L1").arg(event->written));
+        }
     }
 
     void MainWindow::keyPressEvent(QKeyEvent *event)
