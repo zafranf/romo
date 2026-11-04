@@ -70,6 +70,10 @@ namespace Robomongo
 
     private Q_SLOTS:
         void on_downloadTextReply(QNetworkReply* reply);
+        /** @brief Rebuild the connection/tunnel summary. */
+        void refreshConnections();
+        void on_importConnections_clicked();
+        void on_exportConnections_clicked();
         void on_downloadPictureReply(QNetworkReply* reply);
         void on_downloadRssReply(QNetworkReply* reply);
         void on_allBlogsButton_clicked();
@@ -84,6 +88,10 @@ namespace Robomongo
         QVBoxLayout* _blogLinksLay;
         QLabel* _whatsNewHeader;
         QLabel* _whatsNewText;
+        QLabel* _connectionsHeader;
+        QLabel* _connectionsInfo;
+        QPushButton* _importConnectionsButton;
+        QPushButton* _exportConnectionsButton;
         QPushButton* _clearButton;
         QScrollArea* _parent;
         QPixmap _image;

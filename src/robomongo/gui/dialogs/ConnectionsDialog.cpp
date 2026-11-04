@@ -12,12 +12,7 @@
 #include <QApplication>
 #include <QSettings>
 #include <QUuid>
-#include <QDir>
-#include <QFile>
-#include <QFileDialog>
-#include <QJsonArray>
-#include <QJsonDocument>
-#include <QJsonObject>
+#include "robomongo/gui/dialogs/ConnectionTransfer.h"
 
 #include "robomongo/core/AppRegistry.h"
 #include "robomongo/core/settings/ConnectionSettings.h"
@@ -434,109 +429,14 @@ namespace Robomongo
      */
     void ConnectionsDialog::exportConnections()
     {
-        QString const defaultName =
-            QDir::homePath() + QStringLiteral("/romo-connections.json");
-        QString const path = QFileDialog::getSaveFileName(
-            this, tr("Export Connections"), defaultName,
-            tr("JSON files (*.json);;All files (*)"));
-        if (path.isEmpty())
-            return;
-
-        QJsonArray array;
-        for (ConnectionSettings *connection : _settingsManager->connections())
-            array.append(QJsonObject::fromVariantMap(connection->toVariant().toMap()));
-
-        QJsonObject root;
-        root.insert(QStringLiteral("application"), QStringLiteral("romo"));
-        root.insert(QStringLiteral("version"), 1);
-        root.insert(QStringLiteral("connections"), array);
-
-        QFile file(path);
-        if (!file.open(QFile::WriteOnly | QFile::Truncate)) {
-            QMessageBox::warning(this, tr("Export failed"),
-                                 tr("Cannot write to %1:").arg(path));
-            return;
-        }
-        file.write(QJsonDocument(root).toJson(QJsonDocument::Indented));
-        file.close();
-
-        QMessageBox::information(this, tr("Export Connections"),
-                                 tr("Exported %1 connection(s) to\n%2")
-                                     .arg(array.size()).arg(path));
+        ConnectionTransfer::exportConnections(this, _settingsManager);
     }
 
     void ConnectionsDialog::importConnections()
     {
-        QString const path = QFileDialog::getOpenFileName(
-            this, tr("Import Connections"), QDir::homePath(),
-            tr("JSON files (*.json);;All files (*)"));
-        if (path.isEmpty())
-            return;
-
-        QFile file(path);
-        if (!file.open(QFile::ReadOnly)) {
-            QMessageBox::warning(this, tr("Import failed"),
-                                 tr("Cannot read %1.").arg(path));
-            return;
-        }
-
-        QJsonParseError error;
-        QJsonDocument const doc = QJsonDocument::fromJson(file.readAll(), &error);
-        file.close();
-        if (error.error != QJsonParseError::NoError || !doc.isObject()) {
-            QMessageBox::warning(this, tr("Import failed"),
-                                 tr("%1 is not a Romo connections file.").arg(path));
-            return;
-        }
-
-        QJsonArray const array = doc.object().value(QStringLiteral("connections")).toArray();
-        if (array.isEmpty()) {
-            QMessageBox::warning(this, tr("Import failed"),
-                                 tr("No connections found in %1.").arg(path));
-            return;
-        }
-
-        QStringList existing;
-        for (ConnectionSettings const *connection : _settingsManager->connections())
-            existing << QtUtils::toQString(connection->connectionName());
-
-        int imported = 0;
-        int skipped = 0;
-        for (QJsonValue const &value : array) {
-            if (!value.isObject()) {
-                ++skipped;
-                continue;
-            }
-            auto connection = std::make_unique<ConnectionSettings>(false);
-            QVariantMap map = value.toObject().toVariantMap();
-            // A fresh uuid: the file may come from another machine and its uuids
-            // would collide with the local connections.
-            map.remove(QStringLiteral("uuid"));
-            connection->fromVariant(map);
-
-            // Names are how connections are picked, keep them unique.
-            QString name = QtUtils::toQString(connection->connectionName());
-            if (name.isEmpty())
-                name = tr("Imported connection");
-            QString unique = name;
-            for (int n = 2; existing.contains(unique); ++n)
-                unique = QStringLiteral("%1 (%2)").arg(name).arg(n);
-            connection->setConnectionName(QtUtils::toStdString(unique));
-
-            connection->setImported(true);
-            existing << unique;
-            add(connection.get());
-            _settingsManager->addConnection(connection.release());
-            ++imported;
-        }
-
+        for (ConnectionSettings *connection : ConnectionTransfer::importConnections(this, _settingsManager))
+            add(connection);
         _listWidget->setFocus();
-
-        QMessageBox::information(this, tr("Import Connections"),
-                                 skipped > 0
-                                     ? tr("Imported %1 connection(s), skipped %2 invalid entr(ies).")
-                                           .arg(imported).arg(skipped)
-                                     : tr("Imported %1 connection(s).").arg(imported));
     }
 
     void ConnectionsDialog::listWidget_layoutChanged()
