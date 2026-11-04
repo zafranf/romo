@@ -48,8 +48,6 @@ namespace Robomongo {
 #include <QApplication>
 #include <QLabel>
 #include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QStringList>
 #include <QPixmap>
 #include <QNetworkAccessManager>
 #include <QNetworkRequest>
@@ -73,8 +71,6 @@ namespace Robomongo {
 #include "robomongo/core/EventBus.h"
 #include "robomongo/core/settings/SettingsManager.h"
 #include "robomongo/core/settings/ConnectionSettings.h"
-#include "robomongo/core/settings/SshSettings.h"
-#include "robomongo/gui/dialogs/ConnectionTransfer.h"
 #include "robomongo/core/utils/Logger.h"       
 #include "robomongo/core/utils/QtUtils.h"
 #include "robomongo/utils/common.h"
@@ -134,6 +130,15 @@ namespace Robomongo
         <li><b>Modern OpenSSH support</b> — bundled libssh2 upgraded from 1.9 to
         1.11, adding <tt>rsa-sha2</tt>. Robo 3T could no longer authenticate
         against OpenSSH 8.8+ servers that dropped SHA-1.</li>
+        <li><b>Fixed tunnel local port</b> — pin the tunnel to
+        <tt>127.0.0.1:&lt;port&gt;</tt> in the connection's SSH tab, and the MongoDB
+        port stays reachable there while Romo is connected, so
+        <tt>mongosh</tt>, Compass or your own app can share the same tunnel.
+        Hover a connection to see its tunnel address.</li>
+        <li><b>Import &amp; export connections</b> — the connection list is
+        written to and read back from a JSON file (right-click in
+        <tt>File &gt; Connect</tt>), so a new machine is one file away.
+        Passwords stay encrypted.</li>
         <li><b>Command history</b> — press Up/Down in the console to recall what
         you ran earlier, and browse/search everything in the
         <tt>View &gt; History &amp; Favorites</tt> panel, with Paste and Run
@@ -228,40 +233,6 @@ namespace Robomongo
         _pic1->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
         _pic1->setScaledContents(true);
 
-        //// Connections section: tunnel local ports + import/export
-        _connectionsHeader = new QLabel;
-        {
-            QFont connectionsFont { _connectionsHeader->font() };
-            connectionsFont.setPointSize(15);
-            connectionsFont.setBold(true);
-            _connectionsHeader->setFont(connectionsFont);
-        }
-        _connectionsHeader->setText(tr("Connections"));
-
-        _connectionsInfo = new QLabel;
-        _connectionsInfo->setTextFormat(Qt::RichText);
-        _connectionsInfo->setTextInteractionFlags(Qt::TextSelectableByMouse);
-        _connectionsInfo->setWordWrap(true);
-        _connectionsInfo->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
-
-        _importConnectionsButton = new QPushButton(tr("Import Connections"));
-        _importConnectionsButton->setToolTip(
-            tr("Add connections from a Romo connections JSON file."));
-        VERIFY(connect(_importConnectionsButton, SIGNAL(clicked()),
-                       this, SLOT(on_importConnections_clicked())));
-
-        _exportConnectionsButton = new QPushButton(tr("Export Connections"));
-        _exportConnectionsButton->setToolTip(
-            tr("Write every connection (passwords stay encrypted) to a JSON file."));
-        VERIFY(connect(_exportConnectionsButton, SIGNAL(clicked()),
-                       this, SLOT(on_exportConnections_clicked())));
-
-        auto connectionsButtonsLayout = new QHBoxLayout;
-        connectionsButtonsLayout->setContentsMargins(0, 0, 0, 0);
-        connectionsButtonsLayout->addWidget(_importConnectionsButton);
-        connectionsButtonsLayout->addWidget(_exportConnectionsButton);
-        connectionsButtonsLayout->addStretch();
-
         _blogsHeader = new QLabel(BlogsHeader);
         _blogsHeader->setHidden(true);
         _blogsHeader->setFont(headerFont);
@@ -282,12 +253,6 @@ namespace Robomongo
 
         auto rightLayout = new QVBoxLayout;
         rightLayout->setContentsMargins(20, -1, -1, -1);
-        rightLayout->addWidget(_connectionsHeader, 0, Qt::AlignTop);
-        rightLayout->addSpacing(6);
-        rightLayout->addWidget(_connectionsInfo, 0, Qt::AlignTop);
-        rightLayout->addSpacing(10);
-        rightLayout->addLayout(connectionsButtonsLayout);
-        rightLayout->addSpacing(24);
         rightLayout->addWidget(_blogsHeader, 0, Qt::AlignTop);
         rightLayout->addLayout(_blogLinksLay);
         rightLayout->addSpacing(15);
@@ -309,69 +274,11 @@ namespace Robomongo
         mainLayout->setSizeConstraint(QLayout::SetMinimumSize);
 
         setLayout(mainLayout);
-
-        refreshConnections();
     }
 
     WelcomeTab::~WelcomeTab()
     {
 
-    }
-
-    void WelcomeTab::refreshConnections()
-    {
-        auto const* settings = AppRegistry::instance().settingsManager();
-        auto const connections = settings->connections();
-
-        if (connections.empty()) {
-            _connectionsInfo->setText(
-                tr("No connections yet — add one from <b>File &gt; Connect</b>, "
-                   "or import a connections file below."));
-            return;
-        }
-
-        QStringList tunnelRows;
-        for (ConnectionSettings const* connection : connections) {
-            if (!connection->sshSettings() || !connection->sshSettings()->enabled())
-                continue;
-
-            int const localPort = connection->sshSettings()->localPort();
-            QString const name = QtUtils::toQString(connection->connectionName()).toHtmlEscaped();
-            QString const target = QStringLiteral("%1:%2")
-                                       .arg(QtUtils::toQString(connection->serverHost()).toHtmlEscaped())
-                                       .arg(connection->serverPort());
-            tunnelRows << (localPort > 0
-                ? tr("<li><b>%1</b> — tunnel on <tt>127.0.0.1:%2</tt> &rarr; %3</li>")
-                      .arg(name).arg(localPort).arg(target)
-                : tr("<li><b>%1</b> — random local port (set a fixed Local Port "
-                     "in the SSH tab to share it) &rarr; %2</li>").arg(name).arg(target));
-        }
-
-        QString text = tr("<p>%1 connection(s) configured.</p>").arg(connections.size());
-        if (tunnelRows.isEmpty()) {
-            text += tr("<p style='color: #777777'>No SSH tunnels in use. Enable "
-                       "<b>SSH Tunnel</b> on a connection to reach servers on a "
-                       "private network.</p>");
-        }
-        else {
-            text += tr("<p><b>SSH tunnel local ports</b> (usable by mongosh, Compass "
-                       "or your app while Romo is connected):</p><ul>%1</ul>")
-                        .arg(tunnelRows.join(QLatin1String("")));
-        }
-        _connectionsInfo->setText(text);
-    }
-
-    void WelcomeTab::on_importConnections_clicked()
-    {
-        ConnectionTransfer::importConnections(
-            this, AppRegistry::instance().settingsManager());
-        refreshConnections();
-    }
-
-    void WelcomeTab::on_exportConnections_clicked()
-    {
-        ConnectionTransfer::exportConnections(
-            this, AppRegistry::instance().settingsManager());
     }
 
     void WelcomeTab::on_downloadTextReply(QNetworkReply* reply)
