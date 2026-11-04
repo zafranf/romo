@@ -260,6 +260,7 @@ namespace Robomongo
     void OutputItemHeaderWidget::setCount(qint64 count)
     {
         _countIndicator->setVisible(true);
+        _countIndicator->setSpinning(false);
         _countIndicator->setText(QString("%L1 docs.").arg(count));
         _countIndicator->setToolTip(QString());
     }
@@ -268,11 +269,13 @@ namespace Robomongo
     {
         _countIndicator->setVisible(true);
         if (count == -2) {
-            // still counting (asynchronous)
-            _countIndicator->setText(QLatin1String("\u2026"));
+            // still counting (asynchronous) -> animated spinner
+            _countIndicator->setText(QString());
+            _countIndicator->setSpinning(true);
             _countIndicator->setToolTip(tr("Counting documents\u2026"));
         }
         else {
+            _countIndicator->setSpinning(false);
             // failed or timed out
             _countIndicator->setText(QLatin1String("N/A"));
             _countIndicator->setToolTip(

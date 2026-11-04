@@ -3,19 +3,22 @@
 #include <QLabel>
 #include <QHBoxLayout>
 #include <QIcon>
+#include <QMovie>
 
 namespace Robomongo
 {
 
-    Indicator::Indicator(const QIcon &icon, const QString &text)
+    Indicator::Indicator(const QIcon &icon, const QString &text) :
+        _spinner(nullptr)
     {
-        QLabel *iconLabel = createLabelWithIcon(icon);
+        _iconPixmap = icon.pixmap(16, 16);
+        _iconLabel = createLabelWithIcon(icon);
         _label = new QLabel();
 
         QHBoxLayout *layout = new QHBoxLayout();
         layout->setSpacing(0);
         layout->setContentsMargins(0, 0, 0, 0);
-        layout->addWidget(iconLabel);
+        layout->addWidget(_iconLabel);
         layout->addSpacing(7);
         layout->addWidget(_label);
         layout->addSpacing(14);
@@ -27,6 +30,23 @@ namespace Robomongo
     void Indicator::setText(const QString &text)
     {
         _label->setText(text);
+    }
+
+    void Indicator::setSpinning(bool spinning)
+    {
+        if (spinning) {
+            if (!_spinner) {
+                _spinner = new QMovie(":robomongo/icons/loading.gif", QByteArray(), this);
+                _spinner->setScaledSize(QSize(16, 16));
+            }
+            _iconLabel->setMovie(_spinner);
+            _spinner->start();
+        }
+        else if (_spinner) {
+            _spinner->stop();
+            _iconLabel->setMovie(nullptr);
+            _iconLabel->setPixmap(_iconPixmap);
+        }
     }
 
     QLabel *Indicator::createLabelWithIcon(const QIcon &icon)
