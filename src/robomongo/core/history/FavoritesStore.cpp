@@ -1,4 +1,5 @@
 #include "robomongo/core/history/FavoritesStore.h"
+#include "robomongo/core/history/CommandFormatter.h"
 
 #include <QDir>
 #include <QFile>
@@ -32,9 +33,12 @@ namespace Robomongo
 
     int FavoritesStore::indexOf(QString const &connectionName, QString const &command) const
     {
+        // Compare the whitespace-free form: history entries are stored
+        // pretty-printed, while a favorite may hold the original one-liner.
+        QString const key = CommandFormatter::canonical(command);
         for (int i = 0; i < _entries.size(); ++i) {
             if (_entries[i].connectionName == connectionName
-                    && _entries[i].command == command)
+                    && CommandFormatter::canonical(_entries[i].command) == key)
                 return i;
         }
         return -1;

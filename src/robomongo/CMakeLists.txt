@@ -48,6 +48,7 @@ set(SOURCES
     core/domain/MongoDatabase.cpp
     core/domain/App.cpp
     core/history/HistoryStore.cpp
+    core/history/CommandFormatter.cpp
     core/history/FavoritesStore.cpp
     core/mongodb/MongoClient.cpp
     core/mongodb/MongoWorker.cpp
