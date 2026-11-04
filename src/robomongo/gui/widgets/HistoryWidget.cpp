@@ -914,7 +914,8 @@ namespace Robomongo
         metaRow->setContentsMargins(0, 0, 0, 0);
         metaRow->addWidget(metaLabel, 1);
 
-        // Favorite name: under the connection/db line, above the query text.
+        // Favorite name: below the query text (see mainLayout), so toggling it
+        // never moves the arrows pinned to the text edit's top-right corner.
         // The Save button lives at the right end of this row (View & Edit only,
         // the row is hidden for plain history entries). Parented to the dialog
         // up front: refreshHeader() toggles visibility before the layout runs.
@@ -1074,8 +1075,12 @@ namespace Robomongo
         // collide with the dialog edge).
         mainLayout->setSpacing(4);
         mainLayout->addLayout(metaRow);
-        mainLayout->addWidget(nameWidget);
         mainLayout->addWidget(queryText, 1);
+        // The name row sits BELOW the query text on purpose: it only exists for
+        // favorites, and the prev/next arrows are pinned to the text edit's
+        // top-right corner - above it, showing/hiding the row would shift the
+        // arrows while browsing history.
+        mainLayout->addWidget(nameWidget);
         mainLayout->addSpacing(4);
         mainLayout->addLayout(buttonRow);
 
