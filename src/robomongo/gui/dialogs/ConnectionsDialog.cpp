@@ -12,6 +12,12 @@
 #include <QApplication>
 #include <QSettings>
 #include <QUuid>
+#include <QDir>
+#include <QFile>
+#include <QFileDialog>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 
 #include "robomongo/core/AppRegistry.h"
 #include "robomongo/core/settings/ConnectionSettings.h"
@@ -91,6 +97,23 @@ namespace Robomongo
                 setText(2, text(2) + (text(2).isEmpty() ? tunnelText : ", " + tunnelText));
             }
 
+            // Hovering the row spells the tunnel out: which local address the
+            // MongoDB port is forwarded to, and whether the port is fixed.
+            QString tooltip;
+            if (_connection->sshSettings()->enabled()) {
+                int const localPort = _connection->sshSettings()->localPort();
+                // QTreeWidgetItem is not a QObject: qualify tr() explicitly.
+                tooltip = localPort > 0
+                    ? QObject::tr("SSH tunnel: 127.0.0.1:%1 -> %2:%3")
+                          .arg(localPort)
+                          .arg(QtUtils::toQString(_connection->serverHost()))
+                          .arg(_connection->serverPort())
+                    : QObject::tr("SSH tunnel: random local port "
+                                  "(enable a fixed Local Port to share it)");
+                for (int c = 0; c < 4; ++c)
+                    setToolTip(c, tooltip);
+            }
+
             // Header "Auth. Database/User" (column[3])
             if (_connection->hasEnabledPrimaryCredential()) {
                 auto primaryCredential { _connection->primaryCredential() };
@@ -139,6 +162,15 @@ namespace Robomongo
         QAction *removeAction = new QAction("&Remove", this);
         VERIFY(connect(removeAction, SIGNAL(triggered()), this, SLOT(remove())));
 
+        QAction *separatorAction = new QAction(this);
+        separatorAction->setSeparator(true);
+
+        QAction *exportAction = new QAction("E&xport Connections", this);
+        VERIFY(connect(exportAction, SIGNAL(triggered()), this, SLOT(exportConnections())));
+
+        QAction *importAction = new QAction("&Import Connections", this);
+        VERIFY(connect(importAction, SIGNAL(triggered()), this, SLOT(importConnections())));
+
         _listWidget = new ConnectionsTreeWidget;
         GuiRegistry::instance().setAlternatingColor(_listWidget);
 #if defined(Q_OS_MAC)
@@ -161,6 +193,9 @@ namespace Robomongo
         _listWidget->addAction(editAction);
         _listWidget->addAction(cloneAction);
         _listWidget->addAction(removeAction);
+        _listWidget->addAction(separatorAction);
+        _listWidget->addAction(exportAction);
+        _listWidget->addAction(importAction);
         _listWidget->setSelectionMode(QAbstractItemView::SingleSelection); // single item can be draged or droped
         _listWidget->setDragEnabled(true);
         _listWidget->setDragDropMode(QAbstractItemView::InternalMove);
@@ -397,6 +432,113 @@ namespace Robomongo
     /**
      * @brief Handles ListWidget layoutChanged() signal
      */
+    void ConnectionsDialog::exportConnections()
+    {
+        QString const defaultName =
+            QDir::homePath() + QStringLiteral("/romo-connections.json");
+        QString const path = QFileDialog::getSaveFileName(
+            this, tr("Export Connections"), defaultName,
+            tr("JSON files (*.json);;All files (*)"));
+        if (path.isEmpty())
+            return;
+
+        QJsonArray array;
+        for (ConnectionSettings *connection : _settingsManager->connections())
+            array.append(QJsonObject::fromVariantMap(connection->toVariant().toMap()));
+
+        QJsonObject root;
+        root.insert(QStringLiteral("application"), QStringLiteral("romo"));
+        root.insert(QStringLiteral("version"), 1);
+        root.insert(QStringLiteral("connections"), array);
+
+        QFile file(path);
+        if (!file.open(QFile::WriteOnly | QFile::Truncate)) {
+            QMessageBox::warning(this, tr("Export failed"),
+                                 tr("Cannot write to %1:").arg(path));
+            return;
+        }
+        file.write(QJsonDocument(root).toJson(QJsonDocument::Indented));
+        file.close();
+
+        QMessageBox::information(this, tr("Export Connections"),
+                                 tr("Exported %1 connection(s) to\n%2")
+                                     .arg(array.size()).arg(path));
+    }
+
+    void ConnectionsDialog::importConnections()
+    {
+        QString const path = QFileDialog::getOpenFileName(
+            this, tr("Import Connections"), QDir::homePath(),
+            tr("JSON files (*.json);;All files (*)"));
+        if (path.isEmpty())
+            return;
+
+        QFile file(path);
+        if (!file.open(QFile::ReadOnly)) {
+            QMessageBox::warning(this, tr("Import failed"),
+                                 tr("Cannot read %1.").arg(path));
+            return;
+        }
+
+        QJsonParseError error;
+        QJsonDocument const doc = QJsonDocument::fromJson(file.readAll(), &error);
+        file.close();
+        if (error.error != QJsonParseError::NoError || !doc.isObject()) {
+            QMessageBox::warning(this, tr("Import failed"),
+                                 tr("%1 is not a Romo connections file.").arg(path));
+            return;
+        }
+
+        QJsonArray const array = doc.object().value(QStringLiteral("connections")).toArray();
+        if (array.isEmpty()) {
+            QMessageBox::warning(this, tr("Import failed"),
+                                 tr("No connections found in %1.").arg(path));
+            return;
+        }
+
+        QStringList existing;
+        for (ConnectionSettings const *connection : _settingsManager->connections())
+            existing << QtUtils::toQString(connection->connectionName());
+
+        int imported = 0;
+        int skipped = 0;
+        for (QJsonValue const &value : array) {
+            if (!value.isObject()) {
+                ++skipped;
+                continue;
+            }
+            auto connection = std::make_unique<ConnectionSettings>(false);
+            QVariantMap map = value.toObject().toVariantMap();
+            // A fresh uuid: the file may come from another machine and its uuids
+            // would collide with the local connections.
+            map.remove(QStringLiteral("uuid"));
+            connection->fromVariant(map);
+
+            // Names are how connections are picked, keep them unique.
+            QString name = QtUtils::toQString(connection->connectionName());
+            if (name.isEmpty())
+                name = tr("Imported connection");
+            QString unique = name;
+            for (int n = 2; existing.contains(unique); ++n)
+                unique = QStringLiteral("%1 (%2)").arg(name).arg(n);
+            connection->setConnectionName(QtUtils::toStdString(unique));
+
+            connection->setImported(true);
+            existing << unique;
+            add(connection.get());
+            _settingsManager->addConnection(connection.release());
+            ++imported;
+        }
+
+        _listWidget->setFocus();
+
+        QMessageBox::information(this, tr("Import Connections"),
+                                 skipped > 0
+                                     ? tr("Imported %1 connection(s), skipped %2 invalid entr(ies).")
+                                           .arg(imported).arg(skipped)
+                                     : tr("Imported %1 connection(s).").arg(imported));
+    }
+
     void ConnectionsDialog::listWidget_layoutChanged()
     {
         // Make childrens toplevel again. This is a bad, but quickiest item reordering

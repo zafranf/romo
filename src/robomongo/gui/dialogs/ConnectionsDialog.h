@@ -73,6 +73,12 @@ namespace Robomongo
          */
         void clone();
 
+        /** @brief Write every connection to a JSON file (encrypted secrets kept). */
+        void exportConnections();
+
+        /** @brief Append connections from a JSON file, skipping name clashes. */
+        void importConnections();
+
         /**
          * @brief Handles ListWidget layoutChanged() signal
          */
