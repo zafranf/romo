@@ -50,6 +50,9 @@ namespace Robomongo
         void refreshOutputItem();
         void markUninitialized();
 
+        /** @brief Apply an asynchronously computed total count (-3 = unavailable). */
+        void setTotalCount(qint64 count);
+
         void applyDockUndockSettings(bool isDocking) const;
         void toggleOrientation(Qt::Orientation orientation) const;
 

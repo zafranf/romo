@@ -25,6 +25,7 @@
 #include <mongo/scripting/mozjs/engine.h>
 
 #include <mongo/shell/shell_utils.h>
+#include <mongo/client/dbclient_connection.h>
 #include <mongo/base/string_data.h>
 #include <mongo/client/dbclient_base.h>
 #include <pcrecpp.h>
@@ -38,6 +39,20 @@
 
 namespace
 {
+    // Socket timeout for the *shell* connection. Set from the shell timeout
+    // (Options -> Shell timeout) so a query that the server never answers
+    // fails instead of hanging the tab forever.
+    int g_shellSocketTimeoutSec = 0;
+
+    void robomongoOnConnect(mongo::DBClientBase &conn)
+    {
+        mongo::shell_utils::onConnect(conn);
+        if (g_shellSocketTimeoutSec > 0) {
+            if (auto *c = dynamic_cast<mongo::DBClientConnection *>(&conn))
+                c->setSoTimeout(g_shellSocketTimeoutSec);
+        }
+    }
+
     std::vector<std::string> split(const std::string &s, char seperator)
     {
         std::vector<std::string> output;
@@ -100,7 +115,8 @@ namespace Robomongo
             // v0.9
             // mongo::isShell = true;
 
-            mongo::ScriptEngine::setConnectCallback( mongo::shell_utils::onConnect );
+            g_shellSocketTimeoutSec = _timeoutSec;
+            mongo::ScriptEngine::setConnectCallback( robomongoOnConnect );
             mongo::ScriptEngine::setup();            
             mongo::getGlobalScriptEngine()->setScopeInitCallback(mongo::shell_utils::initScope);
             mongo::getGlobalScriptEngine()->enableJIT(true);
@@ -221,8 +237,27 @@ namespace Robomongo
                     QElapsedTimer timer;
                     timer.start();
                     if ( _scope->exec( statement , "(shell)" , false , true , false, _timeoutSec * 1000) ) {
-                         _scope->exec( "__robomongoLastRes = __lastres__; shellPrintHelper( __lastres__ );", 
-                                      "(shell2)" , true , true , false, _timeoutSec * 1000);
+                         std::string const maxTimeMs = std::to_string(_timeoutSec * 1000);
+                         std::string const printScript =
+                             "__robomongoLastRes = __lastres__; \n"
+                             "__rmHadSpecial = false; \n"
+                             "if (typeof __lastres__ == 'object' && __lastres__ != null \n"
+                             "    && __lastres__ instanceof DBQuery) { \n"
+                             "    try { \n"
+                             "        __rmHadSpecial = __lastres__._special; \n"
+                             "        __lastres__.maxTimeMS(" + maxTimeMs + "); \n"
+                             "    } catch (e) { } \n"
+                             "} \n"
+                             "shellPrintHelper( __lastres__ ); \n"
+                             "if (typeof __lastres__ == 'object' && __lastres__ != null \n"
+                             "    && __lastres__ instanceof DBQuery) { \n"
+                             "    try { \n"
+                             "        if (__rmHadSpecial) { delete __lastres__._query['$maxTimeMS']; } \n"
+                             "        else { __lastres__._query = __lastres__._query.query; \n"
+                             "               __lastres__._special = false; } \n"
+                             "    } catch (e) { } \n"
+                             "} \n";
+                         _scope->exec( printScript, "(shell2)" , true , true , false, _timeoutSec * 1000);
                     }
                     else   // failed to run script 
                         failed = true;                               
@@ -357,15 +392,9 @@ namespace Robomongo
             "    __robomongoBatchSize = __robomongoLastRes._batchSize; \n"
             "    __robomongoOptions = __robomongoLastRes._options; \n"
             "    __robomongoSpecial = __robomongoLastRes._special; \n"
-            "    try { \n"
-            "        var __robomongoCountQuery = __robomongoLastRes._query; \n"
-            "        if (__robomongoCountQuery && typeof __robomongoCountQuery === 'object' \n"
-            "            && '$query' in __robomongoCountQuery) { \n"
-            "            __robomongoCountQuery = __robomongoCountQuery.$query; \n"
-            "        } \n"
-            "        __robomongoCount = Number(__robomongoLastRes._collection.count(__robomongoCountQuery)); \n"
-            "        if (isNaN(__robomongoCount)) { __robomongoCount = -1; } \n"
-            "    } catch (e) { } \n"
+            "    // Total count is computed asynchronously by the worker (maxTimeMS-bounded)\n"
+            "    // after the documents are already on screen. -2 = pending.\n"
+            "    __robomongoCount = -2; \n"
             "} \n"
             "else if (typeof __robomongoLastRes == 'object' && __robomongoLastRes != null \n"
             "         && __robomongoLastRes instanceof DBCommandCursor \n"
@@ -421,59 +450,9 @@ namespace Robomongo
 
             AggrInfo newAggrInfo { collectionName, skip, batchSize, origPipeline, options, resultIndex };
             newAggrInfo.dbName = dbName;
-            // Compute the TOTAL matching count for the original (unpaged) pipeline
-            // by re-running it with a trailing $count stage. $out/$merge pipelines
-            // are skipped (side effects / cost). -1 = unknown -> docs.size() fallback.
-            qint64 aggregateCount = -1;
-            {
-                mongo::BSONObj const pipeForCount = aggrInfo.isValid ? aggrInfo.pipeline : pipeline;
-                try {
-                    std::string stages;
-                    for (int i = 0; ; ++i) {
-                        mongo::BSONElement const element = pipeForCount.getField(std::to_string(i));
-                        if (element.eoo())
-                            break;
-                        if (!stages.empty())
-                            stages += ", ";
-                        stages += mongo::tojson(element.Obj());
-                    }
-
-                    std::string const escapedCollection = [&collectionName]() {
-                        std::string escaped;
-                        for (char const c : collectionName) {
-                            if (c == '\\' || c == '\'')
-                                escaped += '\\';
-                            escaped += c;
-                        }
-                        return escaped;
-                    }();
-
-                    std::string const countScript =
-                        "__robomongoCount = -1; \n"
-                        "try { \n"
-                        "    var __rmPipe = [" + stages + "]; \n"
-                        "    var __rmSkipCount = false; \n"
-                        "    for (var __rmI = 0; __rmI < __rmPipe.length; ++__rmI) { \n"
-                        "        if ('$out' in __rmPipe[__rmI] || '$merge' in __rmPipe[__rmI]) { \n"
-                        "            __rmSkipCount = true; \n"
-                        "            break; \n"
-                        "        } \n"
-                        "    } \n"
-                        "    if (!__rmSkipCount) { \n"
-                        "        var __rmCountCur = __robomongoAggDb.getCollection('" + escapedCollection + "')" \
-                        ".aggregate(__rmPipe.concat([{$count: '__rmTotalN'}])); \n"
-                        "        __robomongoCount = __rmCountCur.hasNext()" \
-                        "            ? Number(__rmCountCur.next().__rmTotalN) : 0; \n"
-                        "    } \n"
-                        "    if (isNaN(__robomongoCount)) { __robomongoCount = -1; } \n"
-                        "} catch (e) { __robomongoCount = -1; } \n";
-
-                    _scope->exec(countScript, "(getaggregatecount)", false, false, false);
-                    aggregateCount = static_cast<qint64>(_scope->getNumberLongLong("__robomongoCount"));
-                } catch (...) {
-                    aggregateCount = -1;
-                }
-            }
+            // Total count is computed asynchronously by the worker once the
+            // documents are already on screen (-2 = pending). See MongoWorker.
+            qint64 const aggregateCount = -2;
 
             return MongoShellResult(type, output, objects, MongoQueryInfo(), statement, elapsedms,
                                     newAggrInfo, collectionName, aggregateCount);

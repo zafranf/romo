@@ -105,6 +105,18 @@ namespace Robomongo
         setup(secs, multipleResults, tabbedResults, firstItem, lastItem);
     }
 
+    void OutputItemContentWidget::setTotalCount(qint64 count)
+    {
+        _totalCount = count;
+        if (!_header)
+            return;
+
+        if (count >= 0)
+            _header->setCount(count);
+        else
+            _header->setCountState(count);
+    }
+
     void OutputItemContentWidget::setup(double secs, bool multipleResults, bool tabbedResults,
                                        bool firstItem, bool lastItem)
     {      
@@ -133,11 +145,13 @@ namespace Robomongo
 
         _header->setTime(QString("%1 sec.").arg(secs, 0, 'g', 3));
 
-        // Prefer the engine-computed total matching count; -1 means unknown,
-        // fall back to the number of documents we actually hold.
-        qint64 const totalCount = _totalCount >= 0 ? _totalCount
-                                                   : static_cast<qint64>(_documents.size());
-        _header->setCount(totalCount);
+        // -2 = count pending (worker computes it in the background), -3 = unavailable,
+        // -1 = unknown -> fall back to the number of documents we actually hold.
+        if (_totalCount == -2 || _totalCount == -3)
+            _header->setCountState(_totalCount);
+        else
+            _header->setCount(_totalCount >= 0 ? _totalCount
+                                               : static_cast<qint64>(_documents.size()));
 
         QVBoxLayout *layout = new QVBoxLayout();
         layout->setContentsMargins(0, 0, 0, 0);

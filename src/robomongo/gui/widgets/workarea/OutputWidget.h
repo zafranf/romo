@@ -13,6 +13,7 @@ namespace Robomongo
     class OutputItemContentWidget;
     class ProgressBarPopup;
     class MongoShell;
+    class DocumentCountLoadedEvent;
 
     class OutputWidget : public QTabWidget
     {
@@ -48,6 +49,9 @@ namespace Robomongo
         void maximizePart();
         void tabCloseRequested(int);
 
+        /** @brief Asynchronously computed total count for a result set. */
+        void handle(DocumentCountLoadedEvent *event);
+
     private:
         void mouseReleaseEvent(QMouseEvent *event);
         void clearAllParts();
@@ -60,5 +64,6 @@ namespace Robomongo
         QSplitter *_splitter;
         ProgressBarPopup *_progressBarPopup;
         std::vector<OutputItemContentWidget*> _outputItemContentWidgets;
+        MongoShell *_shell = nullptr;
     };
 }

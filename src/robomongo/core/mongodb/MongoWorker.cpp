@@ -747,6 +747,11 @@ namespace Robomongo
                     new ExecuteScriptResponse(this, result, event->script.empty(), 
                         result.timeoutReached()) // todo: rename to shellTimeout...
                 );
+
+                // Documents are already on their way to the GUI. Now compute the
+                // total count for each result set, bounded by the shell timeout,
+                // and publish it separately (-2 = pending, -3 = unavailable).
+                publishResultCounts(event->sender(), result);
                 return;
             }
 
@@ -1088,6 +1093,44 @@ namespace Robomongo
     MongoClient *MongoWorker::getClient()
     {
         return new MongoClient(getConnection().first);
+    }
+
+    void MongoWorker::publishResultCounts(QObject *shell, const MongoShellExecResult &result)
+    {
+        auto const& results = result.results();
+        for (int i = 0; i < static_cast<int>(results.size()); ++i) {
+            MongoShellResult const& r = results[i];
+            if (r.count() != -2)
+                continue; // nothing pending
+
+            long long count = -3; // unavailable (timeout/failed) -> GUI shows N/A
+            int const timeoutMs = _shellTimeoutSec * 1000;
+            try {
+                boost::scoped_ptr<MongoClient> client { getClient() };
+                if (r.queryInfo()._info.isValid()) {
+                    count = client->countQuery(r.queryInfo(), timeoutMs);
+                }
+                else if (r.aggrInfo().isValid) {
+                    count = client->countAggregate(r.aggrInfo(), timeoutMs);
+                }
+                else {
+                    continue; // nothing to count
+                }
+                client->done();
+            }
+            catch (const std::exception &ex) {
+                count = -3;
+                sendLog(this, LogEvent::RBM_WARN,
+                        std::string("Document count unavailable: ") + ex.what());
+            }
+            catch (...) {
+                count = -3;
+            }
+
+            // publish (not reply): the result tab may be closed meanwhile
+            AppRegistry::instance().bus()->publish(
+                new DocumentCountLoadedEvent(shell, i, count));
+        }
     }
 
     void MongoWorker::configureSSL()

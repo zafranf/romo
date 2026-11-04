@@ -86,6 +86,18 @@ namespace Robomongo
          */
         long long countDocuments(const MongoNamespace &ns, const mongo::BSONObj &query);
 
+        /**
+         * @brief Count for a find() query, bounded by maxTimeMS. Unwraps the
+         *        legacy $query/special form. Throws on server error/timeout.
+         */
+        long long countQuery(const MongoQueryInfo &info, int maxTimeMS);
+
+        /**
+         * @brief Total count for an aggregate pipeline (appends $count),
+         *        bounded by maxTimeMS. Throws on error/timeout.
+         */
+        long long countAggregate(const AggrInfo &aggrInfo, int maxTimeMS);
+
         MongoCollectionInfo runCollStatsCommand(const std::string &ns);
         std::vector<MongoCollectionInfo> runCollStatsCommand(const std::vector<std::string> &namespaces);
 

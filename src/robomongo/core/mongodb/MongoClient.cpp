@@ -738,6 +738,67 @@ namespace Robomongo
         return static_cast<long long>(_dbclient->count(ns.toString(), query));
     }
 
+    long long MongoClient::countQuery(const MongoQueryInfo &info, int maxTimeMS)
+    {
+        mongo::BSONObj filter = info._query;
+        if (info._special) {
+            mongo::BSONElement const inner = filter.getField("query");
+            if (!inner.eoo() && inner.type() == mongo::Object)
+                filter = inner.Obj();
+        }
+
+        mongo::BSONObjBuilder cmd;
+        cmd.append("count", info._info._ns.collectionName());
+        cmd.append("query", filter);
+        if (maxTimeMS > 0)
+            cmd.append("maxTimeMS", maxTimeMS);
+
+        mongo::BSONObj res;
+        _dbclient->runCommand(info._info._ns.databaseName(), cmd.obj(), res);
+        if (!res["ok"].trueValue())
+            throw std::runtime_error(res.toString());
+
+        return static_cast<long long>(res["n"].number());
+    }
+
+    long long MongoClient::countAggregate(const AggrInfo &aggrInfo, int maxTimeMS)
+    {
+        for (int i = 0; ; ++i) {
+            mongo::BSONElement const stage = aggrInfo.pipeline.getField(std::to_string(i));
+            if (stage.eoo())
+                break;
+            mongo::BSONObj const stageObj = stage.Obj();
+            if (!stageObj.getField("$out").eoo() || !stageObj.getField("$merge").eoo())
+                throw std::runtime_error("Cannot count a pipeline that contains $out/$merge.");
+        }
+
+        mongo::BSONArrayBuilder pipeline;
+        for (int i = 0; ; ++i) {
+            mongo::BSONElement const stage = aggrInfo.pipeline.getField(std::to_string(i));
+            if (stage.eoo())
+                break;
+            pipeline.append(stage.Obj());
+        }
+        pipeline.append(BSON("$count" << "__rmTotalN"));
+
+        mongo::BSONObjBuilder cmd;
+        cmd.append("aggregate", aggrInfo.collectionName);
+        cmd.append("pipeline", pipeline.arr());
+        cmd.append("cursor", mongo::BSONObj());
+        if (maxTimeMS > 0)
+            cmd.append("maxTimeMS", maxTimeMS);
+
+        mongo::BSONObj res;
+        _dbclient->runCommand(aggrInfo.dbName, cmd.obj(), res);
+        if (!res["ok"].trueValue())
+            throw std::runtime_error(res.toString());
+
+        mongo::BSONElement const batch = res.getField("cursor").Obj().getField("firstBatch");
+        if (batch.eoo() || batch.Obj().isEmpty())
+            return 0;
+        return static_cast<long long>(batch.Obj().firstElement().number());
+    }
+
     long long MongoClient::importJson(const std::string &dbName, const std::string &collectionName,
                                       const std::string &path,
                                       const std::function<void(long long, long long)> &onProgress)

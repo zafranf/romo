@@ -151,6 +151,12 @@ namespace Robomongo
         std::vector<std::string> getDatabaseNamesSafe(EstablishConnectionRequest* event = nullptr);
         std::string getAuthBase() const;
 
+        /**
+         * @brief Count totals for result sets whose count is still pending (-2),
+         *        bounded by the shell timeout, and publish them to the GUI.
+         */
+        void publishResultCounts(QObject *shell, const MongoShellExecResult &result);
+
         // Returns a pair of DBClientBase* connection and error string
         std::pair<mongo::DBClientBase*, std::string> getConnection(bool mayReturnNull = false);
         MongoClient *getClient();

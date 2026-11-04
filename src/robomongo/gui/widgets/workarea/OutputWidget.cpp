@@ -6,6 +6,8 @@
 #include <QMouseEvent>
 
 #include "robomongo/core/AppRegistry.h"
+#include "robomongo/core/EventBus.h"
+#include "robomongo/core/events/MongoEvents.h"
 #include "robomongo/core/domain/MongoShell.h"
 #include "robomongo/core/settings/SettingsManager.h"
 #include "robomongo/core/utils/QtUtils.h"
@@ -41,10 +43,28 @@ namespace Robomongo
         VERIFY(connect(this, SIGNAL(tabCloseRequested(int)), SLOT(tabCloseRequested(int))));
         
         _progressBarPopup = new ProgressBarPopup(this);
+
+        AppRegistry::instance().bus()->subscribe(this, DocumentCountLoadedEvent::Type);
+    }
+
+    void OutputWidget::handle(DocumentCountLoadedEvent *event)
+    {
+        // Ignore counts that belong to another query tab.
+        if (!_shell || event->sender() != _shell)
+            return;
+
+        int const index = event->resultIndex;
+        if (index < 0 || index >= static_cast<int>(_outputItemContentWidgets.size()))
+            return;
+
+        if (OutputItemContentWidget *item = _outputItemContentWidgets[index])
+            item->setTotalCount(event->count);
     }
 
     void OutputWidget::present(MongoShell *shell, const std::vector<MongoShellResult> &results)
     {
+        _shell = shell;
+
         if (_prevResultsCount > 0)
             clearAllParts();
         

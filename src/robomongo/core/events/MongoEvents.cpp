@@ -34,6 +34,7 @@ namespace Robomongo
     R_REGISTER_EVENT(ExportQueryRequest)
     R_REGISTER_EVENT(ExportProgressEvent)
     R_REGISTER_EVENT(ImportDocumentsRequest)
+    R_REGISTER_EVENT(DocumentCountLoadedEvent)
     R_REGISTER_EVENT(DocumentListLoadedEvent)
     R_REGISTER_EVENT(ExecuteScriptRequest)
     R_REGISTER_EVENT(ExecuteScriptResponse)

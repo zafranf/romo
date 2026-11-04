@@ -40,6 +40,12 @@ namespace Robomongo
         void setTime(const QString &time);
         void setCollection(const QString &collection);
         void setCount(qint64 count);
+
+        /**
+         * @brief Count is being computed in the background (-2) or failed (-3).
+         *        -2 shows an ellipsis, -3 shows N/A with an explanatory tooltip.
+         */
+        void setCountState(qint64 count);
         void maximizeMinimizePart();
 
     private:

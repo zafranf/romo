@@ -997,6 +997,22 @@ namespace Robomongo
         std::string _path;
     };
 
+    /**
+     * @brief Async total count for a result set (sent after documents render).
+     *        count == -3 means the count failed / timed out -> GUI shows N/A.
+     */
+    class DocumentCountLoadedEvent : public Event
+    {
+        R_EVENT
+
+    public:
+        DocumentCountLoadedEvent(QObject *sender, int resultIndex, long long count) :
+            Event(sender), resultIndex(resultIndex), count(count) {}
+
+        int resultIndex;
+        long long count;
+    };
+
     class AutocompleteRequest : public Event
     {
         R_EVENT
