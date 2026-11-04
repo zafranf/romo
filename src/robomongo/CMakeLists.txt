@@ -49,7 +49,6 @@ set(SOURCES
     core/domain/App.cpp
     core/history/HistoryStore.cpp
     core/history/CommandFormatter.cpp
-    gui/dialogs/ConnectionTransfer.cpp
     core/history/FavoritesStore.cpp
     core/mongodb/MongoClient.cpp
     core/mongodb/MongoWorker.cpp

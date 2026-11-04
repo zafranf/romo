@@ -12,7 +12,6 @@
 #include <QApplication>
 #include <QSettings>
 #include <QUuid>
-#include "robomongo/gui/dialogs/ConnectionTransfer.h"
 
 #include "robomongo/core/AppRegistry.h"
 #include "robomongo/core/settings/ConnectionSettings.h"
@@ -92,23 +91,6 @@ namespace Robomongo
                 setText(2, text(2) + (text(2).isEmpty() ? tunnelText : ", " + tunnelText));
             }
 
-            // Hovering the row spells the tunnel out: which local address the
-            // MongoDB port is forwarded to, and whether the port is fixed.
-            QString tooltip;
-            if (_connection->sshSettings()->enabled()) {
-                int const localPort = _connection->sshSettings()->localPort();
-                // QTreeWidgetItem is not a QObject: qualify tr() explicitly.
-                tooltip = localPort > 0
-                    ? QObject::tr("SSH tunnel: 127.0.0.1:%1 -> %2:%3")
-                          .arg(localPort)
-                          .arg(QtUtils::toQString(_connection->serverHost()))
-                          .arg(_connection->serverPort())
-                    : QObject::tr("SSH tunnel: random local port "
-                                  "(enable a fixed Local Port to share it)");
-                for (int c = 0; c < 4; ++c)
-                    setToolTip(c, tooltip);
-            }
-
             // Header "Auth. Database/User" (column[3])
             if (_connection->hasEnabledPrimaryCredential()) {
                 auto primaryCredential { _connection->primaryCredential() };
@@ -157,15 +139,6 @@ namespace Robomongo
         QAction *removeAction = new QAction("&Remove", this);
         VERIFY(connect(removeAction, SIGNAL(triggered()), this, SLOT(remove())));
 
-        QAction *separatorAction = new QAction(this);
-        separatorAction->setSeparator(true);
-
-        QAction *exportAction = new QAction("E&xport Connections", this);
-        VERIFY(connect(exportAction, SIGNAL(triggered()), this, SLOT(exportConnections())));
-
-        QAction *importAction = new QAction("&Import Connections", this);
-        VERIFY(connect(importAction, SIGNAL(triggered()), this, SLOT(importConnections())));
-
         _listWidget = new ConnectionsTreeWidget;
         GuiRegistry::instance().setAlternatingColor(_listWidget);
 #if defined(Q_OS_MAC)
@@ -188,9 +161,6 @@ namespace Robomongo
         _listWidget->addAction(editAction);
         _listWidget->addAction(cloneAction);
         _listWidget->addAction(removeAction);
-        _listWidget->addAction(separatorAction);
-        _listWidget->addAction(exportAction);
-        _listWidget->addAction(importAction);
         _listWidget->setSelectionMode(QAbstractItemView::SingleSelection); // single item can be draged or droped
         _listWidget->setDragEnabled(true);
         _listWidget->setDragDropMode(QAbstractItemView::InternalMove);
@@ -427,18 +397,6 @@ namespace Robomongo
     /**
      * @brief Handles ListWidget layoutChanged() signal
      */
-    void ConnectionsDialog::exportConnections()
-    {
-        ConnectionTransfer::exportConnections(this, _settingsManager);
-    }
-
-    void ConnectionsDialog::importConnections()
-    {
-        for (ConnectionSettings *connection : ConnectionTransfer::importConnections(this, _settingsManager))
-            add(connection);
-        _listWidget->setFocus();
-    }
-
     void ConnectionsDialog::listWidget_layoutChanged()
     {
         // Make childrens toplevel again. This is a bad, but quickiest item reordering

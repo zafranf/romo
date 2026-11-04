@@ -5,7 +5,6 @@
 namespace
 {
     char const kIndent[] = "  ";
-    int const kMaxInline = 40;
 
     bool isQuote(QChar c)
     {
@@ -157,7 +156,17 @@ namespace
             }
             else if (c == QLatin1Char('(') || c == QLatin1Char('[')
                      || c == QLatin1Char('{') || c == QLatin1Char('.')) {
+                // "key: {...}" keeps one space after the colon; everywhere else
+                // (call parens, indexing, member access) the space is dropped.
+                // Look past a space to the previous non-space char: this runs
+                // over already formatted text too, so "key: {" must survive.
+                int k = out.size() - 1;
+                while (k >= 0 && out.at(k) == QLatin1Char(' '))
+                    --k;
+                bool const afterColon = k >= 0 && out.at(k) == QLatin1Char(':');
                 trimSpaces();
+                if (afterColon)
+                    out += QLatin1Char(' ');
                 out += c;
             }
             else {
@@ -222,15 +231,15 @@ namespace
 
     QString formatGroup(QString const &s, int a, int b, int ind)
     {
-        QString const inner = squash(s.mid(a, b - a + 1));
         QString const body = squash(s.mid(a + 1, b - a - 1));
         QStringList const parts = splitTop(body);
 
         if (parts.isEmpty())
             return QString(s.at(a)) + s.at(b);
 
-        if (inner.size() <= kMaxInline && parts.size() <= 1)
-            return spacesLine(inner);
+        // Every non-empty literal is expanded, single-key objects included:
+        // find({project: 5003}) must read as a formatted query, not stay on
+        // one line just because it happens to hold a single key.
 
         QStringList lines;
         for (QString const &part : parts)
